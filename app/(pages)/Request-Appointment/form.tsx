@@ -1,10 +1,11 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 
 type ServiceType = 'bridal' | 'occasion' | ''
 type TrialChoice = 'yes' | 'no' | null
 type AppointmentType = 'studio' | 'mobile' | ''
+type CouponStatus = 'idle' | 'checking' | 'valid' | 'invalid'
 
 export default function BookingPage() {
   const [serviceType, setServiceType] = useState<ServiceType>('')
@@ -14,6 +15,9 @@ export default function BookingPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [appointmentType, setAppointmentType] = useState<AppointmentType>('')
+
+  const [couponCode, setCouponCode] = useState('')
+  const [couponStatus, setCouponStatus] = useState<CouponStatus>('idle')
 
   const [form, setForm] = useState({
     fullName: '',
@@ -54,6 +58,34 @@ export default function BookingPage() {
     setForm(prev => ({ ...prev, [field]: value }))
   }
 
+  // Debounced server-side coupon check
+  useEffect(() => {
+    const trimmed = couponCode.trim()
+
+    if (!trimmed) {
+      setCouponStatus('idle')
+      return
+    }
+
+    setCouponStatus('checking')
+
+    const timeout = setTimeout(async () => {
+      try {
+        const res = await fetch('/api/validate-coupon', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: trimmed }),
+        })
+        const json = await res.json()
+        setCouponStatus(json.valid ? 'valid' : 'invalid')
+      } catch {
+        setCouponStatus('invalid')
+      }
+    }, 500)
+
+    return () => clearTimeout(timeout)
+  }, [couponCode])
+
   const handleSubmit = async () => {
     setLoading(true)
     setError(null)
@@ -67,6 +99,7 @@ export default function BookingPage() {
           trialChoice,
           appointmentType,
           peopleCount,
+          couponCode: couponCode.trim().toUpperCase(),
         }),
       })
       const json = await res.json()
@@ -248,6 +281,31 @@ export default function BookingPage() {
           transform: translateY(-1px);
         }
         .cta-btn:active { transform: translateY(0); }
+
+        .coupon-input-wrap { position: relative; }
+        .coupon-tick {
+          position: absolute;
+          right: 14px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: #00a86b;
+          font-size: 16px;
+          font-weight: bold;
+          pointer-events: none;
+        }
+        .coupon-spinner {
+          position: absolute;
+          right: 14px;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 14px;
+          height: 14px;
+          border-radius: 50%;
+          border: 2px solid rgba(201,169,110,0.25);
+          border-top-color: #c9a96e;
+          animation: spin 0.7s linear infinite;
+        }
+        @keyframes spin { to { transform: translateY(-50%) rotate(360deg); } }
 
         @media (max-width: 560px) {
           .two-col-grid { grid-template-columns: 1fr !important; }
@@ -516,7 +574,7 @@ export default function BookingPage() {
                             name="location"
                             value={form.location}
                             onChange={handleChange}
-                            placeholder="Address or area, e.g. Milton Keynes"
+                            placeholder="Address or Postcode..."
                             className="booking-input"
                           />
                         </div>
@@ -550,6 +608,35 @@ export default function BookingPage() {
                           style={{ resize: 'vertical', lineHeight: 1.75 }}
                         />
                       </div>
+                    </div>
+                  )}
+
+                  {/* ── COUPON ── */}
+                  {(isFullForm || isTrialOnly) && (
+                    <div className="mb-6 slide-in">
+                      <FieldLabel>Coupon Code</FieldLabel>
+                      <div className="coupon-input-wrap">
+                        <input
+                          name="couponCode"
+                          value={couponCode}
+                          onChange={e => setCouponCode(e.target.value)}
+                          placeholder="Enter code (optional)"
+                          className="booking-input"
+                          style={{ paddingRight: couponStatus !== 'idle' ? '44px' : undefined }}
+                        />
+                        {couponStatus === 'checking' && <div className="coupon-spinner" />}
+                        {couponStatus === 'valid' && <span className="coupon-tick">✓</span>}
+                      </div>
+                      {couponStatus === 'invalid' && (
+                        <p style={{ fontFamily: "'Lora', Georgia, serif", fontSize: '12px', color: '#c0614a', fontStyle: 'italic', marginTop: '6px' }}>
+                          Coupon not recognised.
+                        </p>
+                      )}
+                      {couponStatus === 'valid' && (
+                        <p style={{ fontFamily: "'Lora', Georgia, serif", fontSize: '12px', color: '#00a86b', fontStyle: 'italic', marginTop: '6px' }}>
+                          Coupon applied ✦
+                        </p>
+                      )}
                     </div>
                   )}
 
@@ -594,6 +681,7 @@ export default function BookingPage() {
                         By submitting you agree to the{' '}
                         <Link
                           href="/Terms&Conditions"
+                          target='_blank'
                           className="underline underline-offset-4 transition-colors duration-200"
                           style={{ color: '#c9a96e' }}
                         >

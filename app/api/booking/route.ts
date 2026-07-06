@@ -3,6 +3,10 @@ import { NextResponse } from "next/server";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+// Same list as /api/validate-coupon — kept in sync so booking emails
+// always reflect a genuinely verified coupon status.
+const VALID_COUPONS = ["GLAM10", "BRIDE2026"];
+
 export async function POST(req: Request) {
   try {
     const {
@@ -20,7 +24,11 @@ export async function POST(req: Request) {
       location,
       peopleCount,
       additionalInfo,
+      couponCode,
     } = await req.json();
+
+    const normalizedCoupon = couponCode ? String(couponCode).trim().toUpperCase() : "";
+    const couponApplied = normalizedCoupon ? VALID_COUPONS.includes(normalizedCoupon) : false;
 
     const formattedTime =
       timeHour && timeMinute && timePeriod
@@ -112,6 +120,28 @@ export async function POST(req: Request) {
             <table style="width: 100%; border-collapse: collapse; margin-bottom: 28px;">
               ${peopleCount ? `<tr><td style="padding: 8px 0; border-bottom: 1px solid #e8ddd4; color: #7a5c46; font-size: 0.85rem; width: 40%;">Number of People</td><td style="padding: 8px 0; border-bottom: 1px solid #e8ddd4; font-size: 0.85rem;">${peopleCount}</td></tr>` : ""}
               ${additionalInfo ? `<tr><td style="padding: 8px 0; color: #7a5c46; font-size: 0.85rem; vertical-align: top;">Additional Info</td><td style="padding: 8px 0; font-size: 0.85rem; line-height: 1.6;">${additionalInfo.replace(/\n/g, "<br/>")}</td></tr>` : ""}
+            </table>
+            `
+                : ""
+            }
+
+            ${
+              normalizedCoupon
+                ? `
+            <h2 style="font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; color: #c9a96e; font-family: sans-serif; font-weight: 400; margin: 0 0 16px;">
+              Coupon
+            </h2>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 28px;">
+              <tr>
+                <td style="padding: 8px 0; border-bottom: 1px solid #e8ddd4; color: #7a5c46; font-size: 0.85rem; width: 40%;">Code</td>
+                <td style="padding: 8px 0; border-bottom: 1px solid #e8ddd4; font-size: 0.85rem;">${normalizedCoupon}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; color: #7a5c46; font-size: 0.85rem;">Status</td>
+                <td style="padding: 8px 0; font-size: 0.85rem; color: ${couponApplied ? "#00a86b" : "#c0614a"};">
+                  ${couponApplied ? "Valid ✓" : "Invalid / not recognised"}
+                </td>
+              </tr>
             </table>
             `
                 : ""

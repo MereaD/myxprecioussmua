@@ -34,11 +34,30 @@ export default function CollabPage() {
     setForm((prev) => ({ ...prev, collabType: prev.collabType === id ? "" : id }));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!form.brandName || !form.collabType || !form.projectDetails) return;
-    setSubmitted(true);
+  
+    try {
+      const response = await fetch("/api/collab", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(form),
+      });
+  
+      const result = await response.json();
+  
+      if (result.success) {
+        setSubmitted(true);
+      } else {
+        alert("Failed to send inquiry.");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Something went wrong.");
+    }
   };
-
   return (
     <>
       <style>{`
@@ -513,7 +532,7 @@ export default function CollabPage() {
                       className="collab-input"
                       type="text"
                       name="location"
-                      placeholder="City or studio"
+                      placeholder="Postcode or Address"
                       value={form.location}
                       onChange={handleChange}
                     />

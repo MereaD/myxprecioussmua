@@ -20,7 +20,7 @@ export async function POST(req: Request) {
     const typeLabel = collabLabels[collabType] || collabType || "Not specified";
 
     const data = await resend.emails.send({
-      from: "Myxprecioussmua <noreply@myxprecioussmua.com>",
+      from: "Myxprecioussmua <hello@myxprecioussmua.com>",
       to: ["myxprecioussmua@outlook.com"],
       subject: `New Collab Inquiry - ${brandName}${typeLabel ? ` (${typeLabel})` : ""}`,
       html: `

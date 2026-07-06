@@ -8,7 +8,7 @@ export async function POST(req: Request) {
     const { name, email, reason, message } = await req.json();
 
     const data = await resend.emails.send({
-      from: "Myxprecioussmua <noreply@myxprecioussmua.com>",
+      from: "Myxprecioussmua <hello@myxprecioussmua.com>",
       to: ["myxprecioussmua@outlook.com"],
       subject: `New Contact Form Submission${reason ? ` - ${reason}` : ""}`,
       replyTo: email,

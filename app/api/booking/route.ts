@@ -5,7 +5,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Same list as /api/validate-coupon — kept in sync so booking emails
 // always reflect a genuinely verified coupon status.
-const VALID_COUPONS = ["GLAM10", "BRIDE2026"];
+const VALID_COUPONS = ["DIASPORA26"];
 
 export async function POST(req: Request) {
   try {
@@ -66,7 +66,7 @@ export async function POST(req: Request) {
         : "Not specified";
 
     const data = await resend.emails.send({
-      from: "Myxprecioussmua <noreply@myxprecioussmua.com>",
+      from: "Myxprecioussmua <hello@myxprecioussmua.com>",
       to: ["myxprecioussmua@outlook.com"],
       subject: `New Booking Request — ${serviceLabel}${fullName ? ` from ${fullName}` : ""}`,
       replyTo: email,

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 // Keep your valid coupon codes here — server-side only, never exposed to the client.
-const VALID_COUPONS = ["DIASPORA26"];
+const VALID_COUPONS = ["DIASPORA26", "OCTOBER50"];
 
 export async function POST(req: Request) {
   try {

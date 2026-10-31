@@ -614,7 +614,7 @@ export default function CollabPage() {
                 <Link href="/Spotlight" className="footer-link">Spotlight</Link>
                 <Link href="/Bridal" className="footer-link">Bridal</Link>
                 <Link href="/Collab" className="footer-link">Collab</Link>
-                <Link href="/Booking" className="footer-link">Booking</Link>
+                <Link href="/Request-Appointment" className="footer-link">Booking</Link>
                 <Link href="/Contact" className="footer-link">Contact</Link>
               </nav>
             </div>

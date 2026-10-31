@@ -1,36 +1,47 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Myxprecioussmua
 
-## Getting Started
+The website for Myxprecioussmua, the professional makeup artistry business run by Precious. Precious creates soft glam looks that enhance natural beauty and help clients feel confident for every occasion.
 
-First, run the development server:
+Based in Milton Keynes and available to travel.
+
+## Services
+
+- **Bridal:** a bridal preview (trial) to create the ideal look together, plus makeup for the wedding day.
+- **Occasion:** bespoke looks for proms, graduations, parties, baby showers and other special events, designed to photograph well and last day and night.
+- **Collaboration:** editorial and test shoots, film and TV, brand campaigns, events, runways and content creation.
+
+## What to expect
+
+- Premium makeup and skincare products are provided, so clients don't need to bring anything.
+- Inspiration photos are welcome, and Precious checks in on the look before and during the appointment.
+- Appointments take one and a half to two hours, depending on the look.
+- A mini touch-up kit is included with the service.
+
+## Pricing
+
+Bridal previews and occasion makeup start from £70.
+
+| Additional fee | Amount |
+| --- | --- |
+| Early morning (6am – 8am) | +£15 |
+| Saturday and Sunday | +£20 |
+| After 6pm | +£10 |
+| Same day booking | +£15 |
+| Travel outside Milton Keynes | Quoted individually |
+
+Fees can be combined and are confirmed on the invoice. A £35 non-refundable booking fee holds the date, and the remaining balance is due before the booked date.
+
+## Contact
+
+Request an appointment through the website, or email [myxprecioussmua@outlook.com](mailto:myxprecioussmua@outlook.com).
+
+## Running the site locally
+
+This is a [Next.js](https://nextjs.org) project.
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Then open [http://localhost:3000](http://localhost:3000).

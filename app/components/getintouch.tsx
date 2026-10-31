@@ -11,9 +11,29 @@ export default function GetInTouch() {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!form.name || !form.email || !form.message) return;
-    setSubmitted(true);
+
+    try {
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(form),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setSubmitted(true);
+      } else {
+        alert("Failed to send message.");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Something went wrong.");
+    }
   };
 
   return (
@@ -268,7 +288,7 @@ export default function GetInTouch() {
                     Phone Number
                   </p>
                   <a
-                    href="tel:078843747683"
+                    href="tel:07496837465"
                     className="text-sm text-[#5a4435] transition-colors duration-200 hover:text-[#c9a96e]"
                     style={{ fontFamily: "'Lora', Georgia, serif" }}
                   >

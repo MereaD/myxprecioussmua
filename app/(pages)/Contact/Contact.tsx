@@ -253,7 +253,7 @@ export default function ContactMe() {
                     Phone Number
                   </p>
                   <a
-                    href="tel:078843747683"
+                    href="tel:07496837465"
                     className="text-sm text-[#5a4435] transition-colors duration-200 hover:text-[#c9a96e]"
                     style={{ fontFamily: "'Lora', Georgia, serif" }}
                   >

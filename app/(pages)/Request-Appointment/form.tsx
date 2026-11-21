@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { formatDate, formatTime } from '@/lib/time'
 
 type ServiceType = 'bridal' | 'occasion' | ''
 type TrialChoice = 'yes' | 'no' | null
@@ -56,6 +57,35 @@ export default function BookingPage() {
     value: string
   ) => {
     setForm(prev => ({ ...prev, [field]: value }))
+  }
+
+  // Dates and times set in /admin/availability. Empty means any date/time can be requested.
+  const [availableDays, setAvailableDays] = useState<{ date: string; times: string[] }[]>([])
+
+  useEffect(() => {
+    fetch('/api/availability')
+      .then(res => res.json())
+      .then(json => setAvailableDays(json.days ?? []))
+      .catch(() => setAvailableDays([]))
+  }, [])
+
+  const selectedDay = availableDays.find(d => d.date === form.date)
+  const selectedSlot = form.timeHour && form.timeMinute && form.timePeriod
+    ? `${String((Number(form.timeHour) % 12) + (form.timePeriod === 'PM' ? 12 : 0)).padStart(2, '0')}:${form.timeMinute}`
+    : ''
+
+  const handleDayChange = (date: string) => {
+    setForm(prev => ({ ...prev, date, timeHour: '', timeMinute: '', timePeriod: '' }))
+  }
+
+  const handleSlotChange = (slot: string) => {
+    const [h, m] = slot.split(':').map(Number)
+    setForm(prev => ({
+      ...prev,
+      timeHour: String(h % 12 || 12),
+      timeMinute: String(m).padStart(2, '0'),
+      timePeriod: h < 12 ? 'AM' : 'PM',
+    }))
   }
 
   // Debounced server-side coupon check
@@ -497,6 +527,41 @@ export default function BookingPage() {
                     <div className="slide-in">
                       <SectionDivider label="Date & Location" />
 
+                      {availableDays.length > 0 ? (
+                        <>
+                          <div className="mb-6">
+                            <FieldLabel>Date <Req /></FieldLabel>
+                            <select
+                              value={form.date}
+                              onChange={e => handleDayChange(e.target.value)}
+                              className="booking-input"
+                            >
+                              <option value="" disabled>Choose an available date</option>
+                              {availableDays.map(d => (
+                                <option key={d.date} value={d.date}>{formatDate(d.date)}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div className="mb-6">
+                            <FieldLabel>Time <Req /></FieldLabel>
+                            <select
+                              value={selectedDay?.times.includes(selectedSlot) ? selectedSlot : ''}
+                              onChange={e => handleSlotChange(e.target.value)}
+                              className="booking-input"
+                              disabled={!selectedDay}
+                            >
+                              <option value="" disabled>
+                                {selectedDay ? 'Choose a time' : 'Choose a date first'}
+                              </option>
+                              {selectedDay?.times.map(t => (
+                                <option key={t} value={t}>{formatTime(t)}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </>
+                      ) : (
+                      <>
                       <div className="mb-6">
                         <FieldLabel>Date <Req /></FieldLabel>
                         <input
@@ -542,6 +607,8 @@ export default function BookingPage() {
                           </select>
                         </div>
                       </div>
+                      </>
+                      )}
 
                       <div className="mb-6">
                         <FieldLabel>Appointment Type <Req /></FieldLabel>

@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
+import { isValidCoupon, normalizeCode } from "@/lib/store";
 
-// Keep your valid coupon codes here — server-side only, never exposed to the client.
-const VALID_COUPONS = ["DIASPORA26", "OCTOBER50",];
-
+// Coupon codes are managed from /admin/coupons and checked server-side only.
 export async function POST(req: Request) {
   try {
     const { code } = await req.json();
@@ -11,8 +10,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ valid: false });
     }
 
-    const normalized = code.trim().toUpperCase();
-    const valid = VALID_COUPONS.includes(normalized);
+    const normalized = normalizeCode(code);
+    const valid = await isValidCoupon(normalized);
 
     return NextResponse.json({ valid, code: normalized });
   } catch (error) {

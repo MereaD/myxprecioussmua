@@ -1,11 +1,15 @@
 import { Resend } from "resend";
 import { NextResponse } from "next/server";
+import { getUpcomingAvailability, isValidCoupon } from "@/lib/store";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// Same list as /api/validate-coupon — kept in sync so booking emails
-// always reflect a genuinely verified coupon status.
-const VALID_COUPONS = ["DIASPORA26"];
+/** "9", "30", "PM" → "21:30" */
+function to24Hour(hour: string, minute: string, period: string) {
+  let h = Number(hour) % 12;
+  if (period === "PM") h += 12;
+  return `${String(h).padStart(2, "0")}:${minute}`;
+}
 
 export async function POST(req: Request) {
   try {
@@ -28,7 +32,20 @@ export async function POST(req: Request) {
     } = await req.json();
 
     const normalizedCoupon = couponCode ? String(couponCode).trim().toUpperCase() : "";
-    const couponApplied = normalizedCoupon ? VALID_COUPONS.includes(normalizedCoupon) : false;
+    const couponApplied = normalizedCoupon ? await isValidCoupon(normalizedCoupon) : false;
+
+    // When the admin has published availability, only those slots can be requested.
+    const availability = await getUpcomingAvailability();
+    if (availability.length > 0) {
+      const day = availability.find(d => d.date === date);
+      const time = timeHour && timeMinute && timePeriod ? to24Hour(timeHour, timeMinute, timePeriod) : "";
+      if (!day || !day.times.includes(time)) {
+        return NextResponse.json(
+          { success: false, error: "That date or time is no longer available. Please choose another." },
+          { status: 400 }
+        );
+      }
+    }
 
     const formattedTime =
       timeHour && timeMinute && timePeriod

@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 
-interface PortfolioImage {
-  id: number;
+export interface PortfolioImage {
+  id: number | string;
   srcs: string[];   // first image is the grid cover; add more for multi-photo sets
   alt: string;
   note?: string;
@@ -18,7 +18,7 @@ interface PortfolioImage {
 // Multiple photos:    srcs: ["/cover.jpg", "/photo-2.jpg", "/photo-3.jpg"]
 // With video:         srcs: ["/cover.jpg"], video: "/reel.mp4"
 //                     (cover image shows in the grid; video plays in lightbox)
-const images: PortfolioImage[] = [
+const builtInImages: PortfolioImage[] = [
   { id: 1,  srcs: ["/betty1.jpg", "/betty2.jpg"],    video: "betty-video.mp4",                                          alt: "Soft glam look",     note: "",     category: "",      tall: true },
   { id: 2,  srcs: ["/remi.png", "/remi2.png", "/remi3.png"],                         alt: "Bridal makeup",      note: "",              category: "Glam"              },
   { id: 3,  srcs: ["/ojono-pic.jpg",   "/IMG-20260507-WA0014.jpg"],    alt: "Bridal look",     note: "Weeding Look",      category: "Bridal", tall: true },
@@ -35,7 +35,9 @@ const images: PortfolioImage[] = [
 
 const CATEGORIES = ["All", "Glam", "Bridal", "Editorial"];
 
-export default function Portfolio() {
+// `uploaded` comes from /admin/media and is shown before the built-in images.
+export default function Portfolio({ uploaded = [] }: { uploaded?: PortfolioImage[] }) {
+  const images = [...uploaded, ...builtInImages];
   const [active, setActive]       = useState("All");
   const [lightbox, setLightbox]   = useState<PortfolioImage | null>(null);
   const [photoIdx, setPhotoIdx]   = useState(0);

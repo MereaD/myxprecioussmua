@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import Link from "next/link";
 
 export interface PortfolioImage {
@@ -17,14 +17,15 @@ export interface PortfolioImage {
 // Single photo:       srcs: ["/photo.jpg"]
 // Multiple photos:    srcs: ["/cover.jpg", "/photo-2.jpg", "/photo-3.jpg"]
 // With video:         srcs: ["/cover.jpg"], video: "/reel.mp4"
-//                     (cover image shows in the grid; video plays in lightbox)
+//                     (cover image shows in the grid; video plays in the viewer)
+// New looks can also be added from the admin area (Admin → Portfolio).
 const builtInImages: PortfolioImage[] = [
-  { id: 1,  srcs: ["/betty1.jpg", "/betty2.jpg"],    video: "betty-video.mp4",                                          alt: "Soft glam look",     note: "",     category: "",      tall: true },
+  { id: 1,  srcs: ["/betty1.jpg", "/betty2.jpg"],    video: "/betty-video.mp4",                                          alt: "Soft glam look",     note: "",     category: "",      tall: true },
   { id: 2,  srcs: ["/remi.png", "/remi2.png", "/remi3.png"],                         alt: "Bridal makeup",      note: "",              category: "Glam"              },
-  { id: 3,  srcs: ["/ojono-pic.jpg",   "/IMG-20260507-WA0014.jpg"],    alt: "Bridal look",     note: "Weeding Look",      category: "Bridal", tall: true },
-  { id: 4,  srcs: ["/IMG-20260602-WA0007.jpg"],                                              alt: "",      note: "Prom",        category: "Glam"           },
-  { id: 5,  srcs: ["/Danielle.png"],   video:"VID-20260630-WA0014.mp4",                                           alt: "Natural glam",       note: "",   category: "Glam"                },
- { id: 6,  srcs: ["/mummy.jpg"],   video: "mummyvideo.mp4",                      alt: "Soft glam",          note: "",       category: "Glam",      tall: true },
+  { id: 3,  srcs: ["/ojono-pic.jpg",   "/IMG-20260507-WA0014.jpg"],    alt: "Bridal look",     note: "Wedding look",      category: "Bridal", tall: true },
+  { id: 4,  srcs: ["/IMG-20260602-WA0007.jpg"],                                              alt: "Prom makeup",      note: "Prom",        category: "Glam"           },
+  { id: 5,  srcs: ["/Danielle.png"],   video:"/VID-20260630-WA0014.mp4",                                           alt: "Natural glam",       note: "",   category: "Glam"                },
+  { id: 6,  srcs: ["/mummy.jpg"],   video: "/mummyvideo.mp4",                      alt: "Soft glam",          note: "",       category: "Glam",      tall: true },
   //{ id: 7,  srcs: ["/portfolio-7.jpg"],                                              alt: "Bridal party",       note: "Bridal party of four",             category: "Bridal"              },
 //  { id: 8,  srcs: ["/portfolio-8.jpg"],                                              alt: "Creative makeup",    note: "Creative collab with Nia Studios", category: "Editorial",          video: "/portfolio-8-reel.mp4" },
   //{ id: 9,  srcs: ["/portfolio-9.jpg"],                                              alt: "Prom glam",          note: "Prom ready ✨",                     category: "Glam"                },
@@ -33,620 +34,528 @@ const builtInImages: PortfolioImage[] = [
  // { id: 12, srcs: ["/portfolio-12.jpg"],                                             alt: "Glam night out",     note: "Night out glam",                   category: "Glam"                },
 ];
 
-const CATEGORIES = ["All", "Glam", "Bridal", "Editorial"];
+// Filters appear in this order when they have looks in them; any other category follows.
+const CATEGORY_ORDER = ["Bridal", "Glam", "Editorial"];
 
-// `uploaded` comes from /admin/media and is shown before the built-in images.
+/** Paths without a leading slash would load relative to /Portfolio and break. */
+const asset = (src: string) => (/^(https?:)?\//.test(src) ? src : `/${src}`);
+
+type Slide = { type: "image" | "video"; src: string; poster?: string };
+
+function slidesFor(img: PortfolioImage): Slide[] {
+  const photos: Slide[] = img.srcs.map(src => ({ type: "image", src: asset(src) }));
+  return img.video ? [...photos, { type: "video", src: asset(img.video), poster: asset(img.srcs[0]) }] : photos;
+}
+
+// `uploaded` comes from Admin → Portfolio and is shown before the built-in images.
 export default function Portfolio({ uploaded = [] }: { uploaded?: PortfolioImage[] }) {
-  const images = [...uploaded, ...builtInImages];
-  const [active, setActive]       = useState("All");
-  const [lightbox, setLightbox]   = useState<PortfolioImage | null>(null);
-  const [photoIdx, setPhotoIdx]   = useState(0);
-  const [showVideo, setShowVideo] = useState(false); // true = show video tab in lightbox
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const images = useMemo(() => [...uploaded, ...builtInImages], [uploaded]);
+  const [active, setActive] = useState("All");
+  const [viewer, setViewer] = useState<{ entry: number; slide: number } | null>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const lastTrigger = useRef<HTMLElement | null>(null);
+  const touchX = useRef<number | null>(null);
+
+  const categories = useMemo(() => {
+    const counts = new Map<string, number>();
+    images.forEach(img => img.category && counts.set(img.category, (counts.get(img.category) ?? 0) + 1));
+    const names = [...counts.keys()].sort((a, b) => {
+      const ia = CATEGORY_ORDER.indexOf(a), ib = CATEGORY_ORDER.indexOf(b);
+      return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a.localeCompare(b);
+    });
+    return [{ name: "All", count: images.length }, ...names.map(name => ({ name, count: counts.get(name)! }))];
+  }, [images]);
 
   const filtered = active === "All" ? images : images.filter(img => img.category === active);
+  const current = viewer ? filtered[viewer.entry] : null;
+  const slides = current ? slidesFor(current) : [];
+  const slide = viewer ? slides[viewer.slide] : null;
 
-  const openLightbox = (img: PortfolioImage, idx = 0) => {
-    setLightbox(img);
-    setPhotoIdx(idx);
-    setShowVideo(false);
+  const open = (entry: number, trigger: HTMLElement) => {
+    lastTrigger.current = trigger;
+    setViewer({ entry, slide: 0 });
   };
-  const closeLightbox = useCallback(() => {
-    setLightbox(null);
-    setPhotoIdx(0);
-    setShowVideo(false);
+
+  const close = useCallback(() => {
+    setViewer(null);
+    lastTrigger.current?.focus();
   }, []);
 
-  const navigateEntry = useCallback((dir: 1 | -1) => {
-    if (!lightbox) return;
-    const idx = filtered.findIndex(i => i.id === lightbox.id);
-    const next = filtered[(idx + dir + filtered.length) % filtered.length];
-    setLightbox(next);
-    setPhotoIdx(0);
-    setShowVideo(false);
-  }, [lightbox, filtered]);
-
-  const navigatePhoto = useCallback((dir: 1 | -1) => {
-    if (!lightbox) return;
-    setPhotoIdx(prev => (prev + dir + lightbox.srcs.length) % lightbox.srcs.length);
-  }, [lightbox]);
+  // Arrows run through every photo (and video) of a look, then on to the next look.
+  const step = useCallback(
+    (dir: 1 | -1) => {
+      setViewer(v => {
+        if (!v) return v;
+        const count = slidesFor(filtered[v.entry]).length;
+        const nextSlide = v.slide + dir;
+        if (nextSlide >= 0 && nextSlide < count) return { ...v, slide: nextSlide };
+        const entry = (v.entry + dir + filtered.length) % filtered.length;
+        return { entry, slide: dir === 1 ? 0 : slidesFor(filtered[entry]).length - 1 };
+      });
+    },
+    [filtered]
+  );
 
   useEffect(() => {
+    if (!viewer) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") closeLightbox();
-      if (e.key === "ArrowRight") {
-        if (lightbox && !showVideo && lightbox.srcs.length > 1) navigatePhoto(1);
-        else navigateEntry(1);
-      }
-      if (e.key === "ArrowLeft") {
-        if (lightbox && !showVideo && lightbox.srcs.length > 1) navigatePhoto(-1);
-        else navigateEntry(-1);
-      }
+      if (e.key === "Escape") close();
+      if (e.key === "ArrowRight") step(1);
+      if (e.key === "ArrowLeft") step(-1);
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [closeLightbox, navigateEntry, navigatePhoto, lightbox, showVideo]);
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = overflow;
+    };
+  }, [viewer, close, step]);
 
+  // Move focus into the viewer when it opens.
+  const isOpen = viewer !== null;
   useEffect(() => {
-    document.body.style.overflow = lightbox ? "hidden" : "";
-    return () => { document.body.style.overflow = ""; };
-  }, [lightbox]);
-
-  // Pause video when switching away from video tab
-  useEffect(() => {
-    if (!showVideo && videoRef.current) {
-      videoRef.current.pause();
-    }
-  }, [showVideo]);
+    if (isOpen) closeRef.current?.focus();
+  }, [isOpen]);
 
   return (
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Lora:ital,wght@0,400;0,500;1,400&family=Jost:wght@300;400&display=swap');
-        * { box-sizing: border-box; }
 
-        .pf-page { width: 100%; background-color: #faf6f1; }
+        .pf-page { width: 100%; background-color: #faf6f1; color: #2c1f14; }
 
-        .pf-banner {
-          width: 100%;
-          background-color: #c4958a;
-          padding: 52px 24px 56px;
-          text-align: center;
+        /* ── Header ── */
+        .pf-header {
+          max-width: 1180px;
+          margin: 0 auto;
+          padding: 56px 32px 36px;
+          display: flex;
+          flex-wrap: wrap;
+          align-items: flex-end;
+          justify-content: space-between;
+          gap: 20px 40px;
         }
-        .pf-banner-title {
+        .pf-title {
           font-family: 'Cormorant Garamond', Georgia, serif;
           font-weight: 500;
-          font-size: 2rem;
-          color: #faf6f1;
-          letter-spacing: 0.08em;
-          margin-bottom: 20px;
-        }
-        .pf-banner-divider {
-          display: flex; align-items: center; justify-content: center;
-          gap: 12px; margin-bottom: 20px;
-        }
-        .pf-banner-line { height: 1px; width: 40px; background: rgba(250,246,241,0.35); }
-        .pf-banner-star { color: rgba(250,246,241,0.6); font-size: 0.6rem; }
-        .pf-banner-sub {
-          font-family: 'Lora', Georgia, serif;
-          font-size: 0.88rem; line-height: 1.85;
-          color: rgba(250,246,241,0.88);
-          max-width: 420px; margin: 0 auto;
-        }
-
-        .pf-filters {
-          display: flex; align-items: center; justify-content: center;
-          gap: 10px; flex-wrap: wrap;
-          padding: 40px 24px 0;
-        }
-        .pf-pill {
-          font-family: 'Jost', sans-serif;
-          font-weight: 300;
-          font-size: 0.68rem;
-          letter-spacing: 0.2em;
-          text-transform: uppercase;
-          padding: 8px 22px;
-          border-radius: 999px;
-          border: 1px solid rgba(201,169,110,0.4);
-          color: #7a5c46;
-          background: transparent;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-        .pf-pill:hover { border-color: #c9a96e; color: #2c1f14; }
-        .pf-pill.active {
-          background: linear-gradient(135deg, #c9a96e, #a07840);
-          border-color: transparent;
-          color: #faf6f1;
-        }
-
-        /* ══ DESKTOP masonry grid ══ */
-        .pf-grid {
-          columns: 3;
-          column-gap: 16px;
-          padding: 40px 40px 64px;
-          max-width: 1100px;
-          margin: 0 auto;
-        }
-        .pf-grid-item {
-          break-inside: avoid;
-          margin-bottom: 16px;
-          position: relative;
-          cursor: pointer;
-          overflow: hidden;
-          background: #e8ddd4;
-        }
-        .pf-grid-item img {
-          width: 100%;
-          display: block;
-          transition: transform 0.45s ease;
-          object-fit: cover;
-          object-position: top;
-        }
-        .pf-grid-item:hover img { transform: scale(1.04); }
-
-        .pf-grid-overlay {
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(to top, rgba(44,31,20,0.72) 0%, transparent 55%);
-          opacity: 0;
-          transition: opacity 0.3s ease;
-          display: flex;
-          flex-direction: column;
-          justify-content: flex-end;
-          padding: 16px;
-        }
-        .pf-grid-item:hover .pf-grid-overlay { opacity: 1; }
-        .pf-grid-note {
-          font-family: 'Lora', Georgia, serif;
-          font-style: italic;
-          font-size: 0.78rem;
-          color: rgba(250,246,241,0.9);
-          line-height: 1.5;
-          margin-bottom: 4px;
-        }
-        .pf-grid-category {
-          font-family: 'Jost', sans-serif;
-          font-weight: 300;
-          font-size: 0.6rem;
-          letter-spacing: 0.2em;
-          text-transform: uppercase;
-          color: #c9a96e;
-        }
-        .pf-expand-icon {
-          position: absolute;
-          top: 12px; right: 12px;
-          width: 28px; height: 28px;
-          border-radius: 50%;
-          background: rgba(250,246,241,0.15);
-          border: 1px solid rgba(250,246,241,0.35);
-          display: flex; align-items: center; justify-content: center;
-          opacity: 0;
-          transition: opacity 0.3s ease;
-          color: #faf6f1;
-          font-size: 0.7rem;
-        }
-        .pf-grid-item:hover .pf-expand-icon { opacity: 1; }
-
-        /* ══ MOBILE feed ══ */
-        .pf-feed { display: none; }
-
-        @media (max-width: 768px) {
-          .pf-grid { display: none; }
-          .pf-feed {
-            display: flex;
-            flex-direction: column;
-            gap: 0;
-            padding: 24px 0 64px;
-          }
-          .pf-feed-item {
-            position: relative;
-            width: 100%;
-            background: #e8ddd4;
-            cursor: pointer;
-          }
-          .pf-feed-item img {
-            width: 100%;
-            aspect-ratio: 1/1;
-            object-fit: cover;
-            object-position: top;
-            display: block;
-          }
-          .pf-feed-caption {
-            padding: 12px 16px 20px;
-            border-bottom: 1px solid #e8ddd4;
-          }
-          .pf-feed-caption-category {
-            font-family: 'Jost', sans-serif;
-            font-weight: 300;
-            font-size: 0.72rem;
-            letter-spacing: 0.2em;
-            text-transform: uppercase;
-            color: #c9a96e;
-            margin-bottom: 4px;
-          }
-          .pf-feed-caption-note {
-            font-family: 'Lora', Georgia, serif;
-            font-style: italic;
-            font-size: 0.82rem;
-            line-height: 1.6;
-            color: #7a5c46;
-          }
-          .pf-filters { padding: 24px 16px 0; gap: 8px; flex-wrap: wrap; justify-content: center; }
-          .pf-pill { font-size: 0.72rem; padding: 9px 16px; }
-          .pf-banner-title { font-size: 1.6rem; }
-        }
-
-        /* badges (multi-photo & video) */
-        .pf-multi-badge, .pf-video-badge {
-          position: absolute;
-          top: 10px; left: 10px;
-          background: rgba(20,10,5,0.55);
-          border: 1px solid rgba(201,169,110,0.5);
-          color: #c9a96e;
-          font-family: 'Jost', sans-serif;
-          font-weight: 300;
-          font-size: 0.55rem;
-          letter-spacing: 0.15em;
-          text-transform: uppercase;
-          padding: 3px 8px;
-          border-radius: 999px;
-          z-index: 3;
-          display: flex; align-items: center; gap: 4px;
-        }
-        /* when both badges needed, stack them */
-        .pf-video-badge + .pf-multi-badge,
-        .pf-multi-badge + .pf-video-badge {
-          top: 34px;
-        }
-
-        /* ══ LIGHTBOX ══ */
-        .pf-lightbox {
-          position: fixed;
-          inset: 0;
-          z-index: 1000;
-          background: rgba(20, 10, 5, 0.94);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 24px;
-          animation: lbFadeIn 0.2s ease;
-        }
-        @keyframes lbFadeIn { from { opacity: 0; } to { opacity: 1; } }
-        .pf-lb-inner {
-          position: relative;
-          max-width: 720px;
-          width: 100%;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-        }
-        .pf-lb-img-wrap {
-          width: 100%;
-          max-height: 75vh;
-          overflow: hidden;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        .pf-lb-img-wrap img {
-          width: 100%;
-          height: 100%;
-          max-height: 75vh;
-          object-fit: contain;
-          display: block;
-        }
-        /* Video player in lightbox */
-        .pf-lb-video-wrap {
-          width: 100%;
-          max-height: 75vh;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: #000;
-        }
-        .pf-lb-video-wrap video {
-          width: 100%;
-          max-height: 75vh;
-          display: block;
-          outline: none;
-        }
-
-        /* Photo / Video toggle tabs */
-        .pf-lb-tabs {
-          display: flex;
-          gap: 0;
-          margin-bottom: 12px;
-          border: 1px solid rgba(201,169,110,0.3);
-          border-radius: 999px;
-          overflow: hidden;
-        }
-        .pf-lb-tab {
-          font-family: 'Jost', sans-serif;
-          font-weight: 300;
-          font-size: 0.62rem;
-          letter-spacing: 0.18em;
-          text-transform: uppercase;
-          padding: 7px 20px;
-          background: transparent;
-          border: none;
-          color: rgba(250,246,241,0.5);
-          cursor: pointer;
-          transition: all 0.2s;
-        }
-        .pf-lb-tab.active {
-          background: linear-gradient(135deg, #c9a96e, #a07840);
-          color: #faf6f1;
-        }
-
-        .pf-lb-caption {
-          margin-top: 16px;
-          text-align: center;
-        }
-        .pf-lb-note {
-          font-family: 'Lora', Georgia, serif;
-          font-style: italic;
-          font-size: 0.88rem;
-          color: rgba(250,246,241,0.8);
-          margin-bottom: 4px;
-        }
-        .pf-lb-category {
-          font-family: 'Jost', sans-serif;
-          font-weight: 300;
-          font-size: 0.62rem;
-          letter-spacing: 0.22em;
-          text-transform: uppercase;
-          color: #c9a96e;
-        }
-        .pf-lb-close {
-          position: absolute;
-          top: -48px; right: 0;
-          background: none; border: none; cursor: pointer;
-          color: rgba(250,246,241,0.7);
-          font-size: 1.4rem;
+          font-size: clamp(2.6rem, 6vw, 4.2rem);
           line-height: 1;
-          transition: color 0.2s;
+          letter-spacing: -0.01em;
         }
-        .pf-lb-close:hover { color: #faf6f1; }
-        .pf-lb-arrow {
-          position: fixed;
-          top: 50%; transform: translateY(-50%);
-          background: rgba(250,246,241,0.08);
-          border: 1px solid rgba(250,246,241,0.15);
-          color: rgba(250,246,241,0.7);
-          width: 44px; height: 44px;
-          border-radius: 50%;
-          cursor: pointer;
-          display: flex; align-items: center; justify-content: center;
-          font-size: 1rem;
-          transition: all 0.2s ease;
+        .pf-title em { font-weight: 400; color: #a07840; }
+        .pf-intro {
+          font-family: 'Lora', Georgia, serif;
+          font-size: 0.95rem; line-height: 1.75;
+          color: #7a5c46;
+          max-width: 360px;
         }
-        .pf-lb-arrow:hover { background: rgba(250,246,241,0.16); color: #faf6f1; }
-        .pf-lb-arrow.prev { left: 20px; }
-        .pf-lb-arrow.next { right: 20px; }
-        .pf-lb-counter {
-          position: absolute;
-          bottom: -36px;
-          left: 50%; transform: translateX(-50%);
-          font-family: 'Jost', sans-serif;
-          font-weight: 300;
-          font-size: 0.65rem;
-          letter-spacing: 0.2em;
-          color: rgba(250,246,241,0.4);
-          white-space: nowrap;
-        }
-        .pf-lb-dots {
-          display: flex; align-items: center; justify-content: center;
-          gap: 6px; margin-top: 14px;
-        }
-        .pf-lb-dot {
-          width: 6px; height: 6px; border-radius: 50%;
-          background: rgba(250,246,241,0.25);
-          border: none; cursor: pointer; padding: 0;
-          transition: background 0.2s;
-        }
-        .pf-lb-dot.active { background: #c9a96e; }
 
-        .pf-cta-wrap {
-          display: flex; justify-content: center;
-          padding: 0 24px 64px;
+        /* ── Filters (stick under the nav while scrolling) ── */
+        .pf-filters-bar {
+          position: sticky;
+          top: 64px;
+          z-index: 20;
+          background: rgba(250, 246, 241, 0.94);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+          border-top: 1px solid #ece2d8;
+          border-bottom: 1px solid #ece2d8;
+        }
+        .pf-filters {
+          max-width: 1180px;
+          margin: 0 auto;
+          padding: 0 32px;
+          display: flex;
+          gap: 28px;
+          overflow-x: auto;
+          scrollbar-width: none;
+        }
+        .pf-filters::-webkit-scrollbar { display: none; }
+        .pf-filter {
+          position: relative;
+          flex-shrink: 0;
+          display: inline-flex; align-items: baseline; gap: 6px;
+          height: 52px;
+          padding: 0;
+          background: none; border: none; cursor: pointer;
+          font-family: 'Jost', sans-serif; font-weight: 400;
+          font-size: 0.74rem; letter-spacing: 0.18em; text-transform: uppercase;
+          color: #9a8470;
+          transition: color 0.2s ease;
+          align-items: center;
+        }
+        .pf-filter sup { font-size: 0.62rem; letter-spacing: 0; color: #b8a28e; }
+        .pf-filter::after {
+          content: '';
+          position: absolute; left: 0; right: 0; bottom: -1px;
+          height: 2px; background: #a07840;
+          transform: scaleX(0); transition: transform 0.25s ease;
+        }
+        .pf-filter:hover { color: #2c1f14; }
+        .pf-filter[aria-pressed="true"] { color: #2c1f14; }
+        .pf-filter[aria-pressed="true"]::after { transform: scaleX(1); }
+
+        /* ── Masonry grid ── */
+        .pf-grid {
+          max-width: 1180px;
+          margin: 0 auto;
+          padding: 36px 32px 72px;
+          columns: 3;
+          column-gap: 20px;
+        }
+        .pf-item {
+          display: block;
+          width: 100%;
+          break-inside: avoid;
+          margin: 0 0 28px;
+          padding: 0;
+          border: none;
+          background: none;
+          text-align: left;
+          cursor: pointer;
+          animation: pfIn 0.6s ease both;
+        }
+        .pf-item:focus-visible { outline: 2px solid #a07840; outline-offset: 4px; }
+        .pf-media {
+          position: relative;
+          overflow: hidden;
+          background: #ece2d8;
+          border-radius: 2px;
+        }
+        .pf-media img {
+          display: block;
+          width: 100%;
+          height: auto;
+          transition: transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1), filter 0.4s ease;
+        }
+        .pf-item:hover .pf-media img { transform: scale(1.035); }
+        .pf-media::after {
+          content: '';
+          position: absolute; inset: 0;
+          background: linear-gradient(to top, rgba(28, 20, 14, 0.35), transparent 40%);
+          opacity: 0; transition: opacity 0.4s ease;
+        }
+        .pf-item:hover .pf-media::after { opacity: 1; }
+
+        .pf-badges {
+          position: absolute; top: 10px; right: 10px; z-index: 2;
+          display: flex; gap: 6px;
+        }
+        .pf-badge {
+          display: inline-flex; align-items: center; gap: 5px;
+          height: 26px; padding: 0 9px;
+          border-radius: 999px;
+          background: rgba(28, 20, 14, 0.55);
+          backdrop-filter: blur(6px);
+          -webkit-backdrop-filter: blur(6px);
+          color: #faf6f1;
+          font-family: 'Jost', sans-serif; font-size: 0.68rem; letter-spacing: 0.04em;
+        }
+
+        .pf-caption {
+          display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+          padding-top: 10px;
+        }
+        .pf-caption-note {
+          font-family: 'Cormorant Garamond', Georgia, serif;
+          font-size: 1.15rem; line-height: 1.25; color: #2c1f14;
+        }
+        .pf-caption-cat {
+          flex-shrink: 0;
+          font-family: 'Jost', sans-serif; font-weight: 400;
+          font-size: 0.66rem; letter-spacing: 0.2em; text-transform: uppercase;
+          color: #a07840;
+        }
+
+        .pf-empty {
+          grid-column: 1 / -1;
+          text-align: center;
+          padding: 64px 0;
+          font-family: 'Lora', Georgia, serif; font-style: italic; color: #9a8470;
+        }
+
+        /* ── Closing call to action ── */
+        .pf-cta {
+          border-top: 1px solid #ece2d8;
+          text-align: center;
+          padding: 72px 24px 88px;
+        }
+        .pf-cta h2 {
+          font-family: 'Cormorant Garamond', Georgia, serif;
+          font-weight: 500; font-size: clamp(2rem, 4vw, 2.8rem); line-height: 1.1;
+          margin-bottom: 12px;
+        }
+        .pf-cta h2 em { font-weight: 400; color: #a07840; }
+        .pf-cta p {
+          font-family: 'Lora', Georgia, serif; font-size: 0.95rem; color: #7a5c46;
+          max-width: 380px; margin: 0 auto 28px; line-height: 1.7;
         }
         .pf-cta-btn {
-          display: inline-flex; align-items: center; gap: 10px;
-          background: linear-gradient(135deg, #c9a96e, #a07840);
-          color: #faf6f1;
-          font-family: 'Jost', sans-serif;
-          font-weight: 300; font-size: 0.75rem;
-          letter-spacing: 0.2em; text-transform: uppercase;
-          text-decoration: none;
-          padding: 14px 40px;
-          border-radius: 999px;
-          box-shadow: 0 4px 18px rgba(201,169,110,0.28);
-          transition: box-shadow 0.25s ease, transform 0.25s ease;
+          display: inline-flex; align-items: center; gap: 12px;
+          height: 52px; padding: 0 30px; border-radius: 999px;
+          background: #2c1f14; color: #faf6f1;
+          font-family: 'Jost', sans-serif; font-size: 0.74rem;
+          letter-spacing: 0.2em; text-transform: uppercase; text-decoration: none;
+          transition: background 0.25s ease;
         }
-        .pf-cta-btn:hover { box-shadow: 0 8px 32px rgba(201,169,110,0.45); transform: translateY(-1px); }
-        .pf-cta-btn:active { transform: translateY(0); }
+        .pf-cta-btn:hover { background: #a07840; }
 
-        @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(16px); }
+        @keyframes pfIn {
+          from { opacity: 0; transform: translateY(14px); }
           to   { opacity: 1; transform: translateY(0); }
         }
-        .pf-fade-up { animation: fadeUp 0.6s ease both; }
+
+        /* ── Viewer ── */
+        .pf-viewer {
+          position: fixed; inset: 0; z-index: 1000;
+          display: flex; flex-direction: column;
+          background: #120c08;
+          color: #faf6f1;
+          animation: pfFade 0.2s ease;
+        }
+        @keyframes pfFade { from { opacity: 0; } to { opacity: 1; } }
+        .pf-vbar {
+          display: flex; align-items: center; justify-content: space-between;
+          height: 60px; padding: 0 20px; flex-shrink: 0;
+          font-family: 'Jost', sans-serif; font-size: 0.72rem; letter-spacing: 0.18em;
+          text-transform: uppercase; color: rgba(250, 246, 241, 0.6);
+        }
+        .pf-vclose, .pf-varrow {
+          display: inline-flex; align-items: center; justify-content: center;
+          width: 44px; height: 44px; border-radius: 999px;
+          border: 1px solid rgba(250, 246, 241, 0.18);
+          background: rgba(250, 246, 241, 0.04);
+          color: #faf6f1; cursor: pointer;
+          transition: background 0.2s ease, border-color 0.2s ease;
+        }
+        .pf-vclose:hover, .pf-varrow:hover { background: rgba(250, 246, 241, 0.12); border-color: rgba(250, 246, 241, 0.35); }
+        .pf-vclose:focus-visible, .pf-varrow:focus-visible, .pf-thumb:focus-visible { outline: 2px solid #e8c99a; outline-offset: 2px; }
+        .pf-stage {
+          position: relative;
+          flex: 1; min-height: 0;
+          display: flex; align-items: center; justify-content: center;
+          padding: 0 84px;
+          touch-action: pan-y;
+        }
+        .pf-stage img, .pf-stage video {
+          max-width: 100%; max-height: 100%;
+          object-fit: contain; display: block;
+          animation: pfFade 0.25s ease;
+        }
+        .pf-stage video { background: #000; }
+        .pf-varrow { position: absolute; top: 50%; transform: translateY(-50%); }
+        .pf-varrow.prev { left: 20px; }
+        .pf-varrow.next { right: 20px; }
+        .pf-vfoot {
+          flex-shrink: 0;
+          padding: 16px 20px 20px;
+          display: flex; flex-direction: column; align-items: center; gap: 14px;
+        }
+        .pf-vcaption { text-align: center; min-height: 1.4em; }
+        .pf-vcaption strong {
+          font-family: 'Cormorant Garamond', Georgia, serif; font-weight: 500;
+          font-size: 1.3rem; margin-right: 10px;
+        }
+        .pf-vcaption span {
+          font-family: 'Jost', sans-serif; font-size: 0.66rem; letter-spacing: 0.2em;
+          text-transform: uppercase; color: #c9a96e;
+        }
+        .pf-thumbs { display: flex; gap: 8px; overflow-x: auto; max-width: 100%; padding: 2px; }
+        .pf-thumb {
+          position: relative; flex-shrink: 0;
+          width: 56px; height: 56px; padding: 0;
+          border: 1px solid transparent; border-radius: 4px; overflow: hidden;
+          background: #241911; cursor: pointer; opacity: 0.5;
+          transition: opacity 0.2s ease, border-color 0.2s ease;
+        }
+        .pf-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .pf-thumb[aria-current="true"] { opacity: 1; border-color: #e8c99a; }
+        .pf-thumb:hover { opacity: 0.85; }
+        .pf-thumb-play {
+          position: absolute; inset: 0;
+          display: flex; align-items: center; justify-content: center;
+          background: rgba(0, 0, 0, 0.35);
+        }
+
+        @media (max-width: 1024px) {
+          .pf-grid { columns: 2; }
+        }
+        @media (max-width: 640px) {
+          .pf-header { padding: 36px 20px 24px; }
+          .pf-intro { font-size: 0.9rem; }
+          .pf-filters { padding: 0 20px; gap: 22px; }
+          .pf-filter { height: 48px; }
+          .pf-grid { padding: 20px 14px 48px; column-gap: 12px; }
+          .pf-item { margin-bottom: 20px; }
+          .pf-caption { flex-direction: column; gap: 2px; padding-top: 8px; }
+          .pf-caption-note { font-size: 1rem; }
+          .pf-caption-cat { font-size: 0.6rem; }
+          .pf-badge { height: 22px; padding: 0 7px; font-size: 0.62rem; }
+          .pf-stage { padding: 0; }
+          .pf-varrow { display: none; }
+          .pf-vbar { padding: 0 12px; }
+          .pf-cta { padding: 56px 20px 64px; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .pf-item, .pf-viewer, .pf-stage img, .pf-stage video { animation: none; }
+          .pf-media img { transition: none; }
+        }
       `}</style>
 
       <div className="pf-page">
-
-        {/* ── Banner ── */}
-        <div className="pf-banner pf-fade-up">
-          <h1 className="pf-banner-title">Portfolio</h1>
-          <div className="pf-banner-divider">
-            <div className="pf-banner-line" />
-            <span className="pf-banner-star">✦</span>
-            <div className="pf-banner-line" />
+        <header className="pf-header">
+          <div>
+            <h1 className="pf-title">
+              The <em>portfolio</em>
+            </h1>
           </div>
-          <p className="pf-banner-sub">
-            A collection of looks created with love
+          <p className="pf-intro">
+            Soft glam for brides, special occasions and shoots. Tap any look to see every photo and video.
           </p>
-        </div>
+        </header>
 
-        {/* ── Filter pills ── */}
-        <div className="pf-filters">
-          {CATEGORIES.map(cat => (
+        {categories.length > 2 && (
+          <div className="pf-filters-bar">
+            <div className="pf-filters" role="group" aria-label="Filter looks">
+              {categories.map(c => (
+                <button
+                  key={c.name}
+                  className="pf-filter"
+                  aria-pressed={active === c.name}
+                  onClick={() => setActive(c.name)}
+                >
+                  {c.name}
+                  <sup>{c.count}</sup>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="pf-grid">
+          {filtered.length === 0 && <p className="pf-empty">No looks in this category yet.</p>}
+          {filtered.map((img, i) => (
             <button
-              key={cat}
-              className={`pf-pill${active === cat ? " active" : ""}`}
-              onClick={() => setActive(cat)}
+              key={`${active}-${img.id}`}
+              className="pf-item"
+              style={{ animationDelay: `${Math.min(i, 8) * 0.05}s` }}
+              onClick={e => open(i, e.currentTarget)}
+              aria-label={`Open ${img.note || img.alt || "look"}${img.srcs.length > 1 ? `, ${img.srcs.length} photos` : ""}${img.video ? ", with video" : ""}`}
             >
-              {cat}
+              <div className="pf-media">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={asset(img.srcs[0])} alt={img.alt} loading={i < 6 ? "eager" : "lazy"} />
+                {(img.srcs.length > 1 || img.video) && (
+                  <div className="pf-badges" aria-hidden="true">
+                    {img.srcs.length > 1 && (
+                      <span className="pf-badge">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="7" y="7" width="13" height="13" rx="2" /><path d="M4 16V5a1 1 0 0 1 1-1h11" /></svg>
+                        {img.srcs.length}
+                      </span>
+                    )}
+                    {img.video && (
+                      <span className="pf-badge">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z" /></svg>
+                        Video
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+              {(img.note || img.category) && (
+                <div className="pf-caption">
+                  <span className="pf-caption-note">{img.note || img.alt}</span>
+                  {img.category && <span className="pf-caption-cat">{img.category}</span>}
+                </div>
+              )}
             </button>
           ))}
         </div>
 
-        {/* ══ DESKTOP masonry grid ══ */}
-        <div className="pf-grid">
-          {filtered.map((img, i) => (
-            <div
-              key={img.id}
-              className="pf-grid-item pf-fade-up"
-              style={{ animationDelay: `${i * 0.05}s` }}
-              onClick={() => openLightbox(img, 0)}
-            >
-              <img src={img.srcs[0]} alt={img.alt} loading="lazy" />
-              {img.video && (
-                <div className="pf-video-badge">▶ Video</div>
-              )}
-              {img.srcs.length > 1 && (
-                <div className="pf-multi-badge">+{img.srcs.length} photos</div>
-              )}
-              <div className="pf-grid-overlay">
-                {img.note && <p className="pf-grid-note">{img.note}</p>}
-                {img.category && <span className="pf-grid-category">{img.category}</span>}
-              </div>
-              <div className="pf-expand-icon">⤢</div>
-            </div>
-          ))}
-        </div>
-
-        {/* ══ MOBILE feed ══ */}
-        <div className="pf-feed">
-          {filtered.map((img) => (
-            <div key={img.id} className="pf-feed-item" onClick={() => openLightbox(img, 0)}>
-              <img src={img.srcs[0]} alt={img.alt} loading="lazy" />
-              <div className="pf-feed-caption">
-                {img.category && (
-                  <p className="pf-feed-caption-category">
-                    {img.category}
-                    {img.srcs.length > 1 ? ` · ${img.srcs.length} photos` : ""}
-                    {img.video ? " · Video" : ""}
-                  </p>
-                )}
-                {img.note && <p className="pf-feed-caption-note">{img.note}</p>}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* ── Book CTA ── */}
-        <div className="pf-cta-wrap">
+        <section className="pf-cta">
+          <h2>
+            Love what you <em>see?</em>
+          </h2>
+          <p>Tell me about your day and let&apos;s create a look that feels like you.</p>
           <Link href="/Request-Appointment" className="pf-cta-btn">
-            Request Appointment ✦
+            Request appointment
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M5 12h14M13 6l6 6-6 6" />
+            </svg>
           </Link>
-        </div>
-
+        </section>
       </div>
 
-      {/* ══ LIGHTBOX ══ */}
-      {lightbox && (
-        <div className="pf-lightbox" onClick={closeLightbox}>
-          <div className="pf-lb-inner" onClick={e => e.stopPropagation()}>
-            <button className="pf-lb-close" onClick={closeLightbox}>✕</button>
+      {/* ── Viewer ── */}
+      {viewer && current && slide && (
+        <div className="pf-viewer" role="dialog" aria-modal="true" aria-label={current.note || current.alt || "Portfolio look"}>
+          <div className="pf-vbar">
+            <span>
+              {viewer.entry + 1} / {filtered.length}
+              {slides.length > 1 && ` · ${slide.type === "video" ? "Video" : `Photo ${viewer.slide + 1} of ${current.srcs.length}`}`}
+            </span>
+            <button ref={closeRef} className="pf-vclose" onClick={close} aria-label="Close">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg>
+            </button>
+          </div>
 
-            {/* Photo / Video tabs — only shown when entry has both */}
-            {lightbox.video && (
-              <div className="pf-lb-tabs">
-                <button
-                  className={`pf-lb-tab${!showVideo ? " active" : ""}`}
-                  onClick={() => setShowVideo(false)}
-                >
-                  Photos
-                </button>
-                <button
-                  className={`pf-lb-tab${showVideo ? " active" : ""}`}
-                  onClick={() => setShowVideo(true)}
-                >
-                  ▶ Video
-                </button>
-              </div>
-            )}
-
-            {/* Media area */}
-            {showVideo && lightbox.video ? (
-              <div className="pf-lb-video-wrap">
-                <video
-                  ref={videoRef}
-                  src={lightbox.video}
-                  controls
-                  playsInline
-                  autoPlay
-                />
-              </div>
+          <div
+            className="pf-stage"
+            onClick={e => e.target === e.currentTarget && close()}
+            onTouchStart={e => (touchX.current = e.touches[0].clientX)}
+            onTouchEnd={e => {
+              if (touchX.current === null) return;
+              const dx = e.changedTouches[0].clientX - touchX.current;
+              touchX.current = null;
+              if (Math.abs(dx) > 50) step(dx < 0 ? 1 : -1);
+            }}
+          >
+            {slide.type === "video" ? (
+              <video key={slide.src} src={slide.src} poster={slide.poster} controls playsInline autoPlay />
             ) : (
-              <div className="pf-lb-img-wrap">
-                <img src={lightbox.srcs[photoIdx]} alt={lightbox.alt} />
-              </div>
+              // eslint-disable-next-line @next/next/no-img-element
+              <img key={slide.src} src={slide.src} alt={current.alt} />
             )}
-
-            {(lightbox.note || lightbox.category) && (
-              <div className="pf-lb-caption">
-                {lightbox.note && <p className="pf-lb-note">{lightbox.note}</p>}
-                {lightbox.category && <span className="pf-lb-category">{lightbox.category}</span>}
-              </div>
+            {(filtered.length > 1 || slides.length > 1) && (
+              <>
+                <button className="pf-varrow prev" onClick={() => step(-1)} aria-label="Previous">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M15 6l-6 6 6 6" /></svg>
+                </button>
+                <button className="pf-varrow next" onClick={() => step(1)} aria-label="Next">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
+                </button>
+              </>
             )}
+          </div>
 
-            {/* Dot indicators — only for photo view with multiple photos */}
-            {!showVideo && lightbox.srcs.length > 1 && (
-              <div className="pf-lb-dots">
-                {lightbox.srcs.map((_, i) => (
+          <div className="pf-vfoot">
+            <div className="pf-vcaption">
+              {current.note && <strong>{current.note}</strong>}
+              {current.category && <span>{current.category}</span>}
+            </div>
+            {slides.length > 1 && (
+              <div className="pf-thumbs">
+                {slides.map((s, i) => (
                   <button
-                    key={i}
-                    className={`pf-lb-dot${i === photoIdx ? " active" : ""}`}
-                    onClick={() => setPhotoIdx(i)}
-                  />
+                    key={s.src}
+                    className="pf-thumb"
+                    aria-current={i === viewer.slide}
+                    aria-label={s.type === "video" ? "Play video" : `Photo ${i + 1}`}
+                    onClick={() => setViewer({ ...viewer, slide: i })}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={s.type === "video" ? s.poster : s.src} alt="" />
+                    {s.type === "video" && (
+                      <span className="pf-thumb-play">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="#faf6f1"><path d="M7 4.5v15l13-7.5z" /></svg>
+                      </span>
+                    )}
+                  </button>
                 ))}
               </div>
             )}
-
-            <span className="pf-lb-counter">
-              {showVideo
-                ? `Video · ${filtered.findIndex(i => i.id === lightbox.id) + 1} of ${filtered.length}`
-                : lightbox.srcs.length > 1
-                  ? `${photoIdx + 1} / ${lightbox.srcs.length} · ${filtered.findIndex(i => i.id === lightbox.id) + 1} of ${filtered.length}`
-                  : `${filtered.findIndex(i => i.id === lightbox.id) + 1} / ${filtered.length}`
-              }
-            </span>
           </div>
-
-          {/* Arrows: navigate photos when in photo view with multiple; otherwise navigate entries */}
-          <button
-            className="pf-lb-arrow prev"
-            onClick={e => {
-              e.stopPropagation();
-              if (!showVideo && lightbox.srcs.length > 1) navigatePhoto(-1);
-              else navigateEntry(-1);
-            }}
-          >
-            ‹
-          </button>
-          <button
-            className="pf-lb-arrow next"
-            onClick={e => {
-              e.stopPropagation();
-              if (!showVideo && lightbox.srcs.length > 1) navigatePhoto(1);
-              else navigateEntry(1);
-            }}
-          >
-            ›
-          </button>
         </div>
       )}
     </>

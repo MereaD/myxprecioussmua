@@ -9,6 +9,7 @@ import {
   type Invoice,
   type InvoiceItem,
 } from "@/lib/invoice";
+import type { Booking } from "@/lib/booking";
 import { EmptyState, Notice, PageHeader } from "../../ui";
 
 type Message = { kind: "ok" | "error"; text: string } | null;
@@ -46,6 +47,45 @@ function newInvoice(existing: Invoice[]): Invoice {
   };
 }
 
+/** A draft invoice pre-filled from a booking request: client details, date, service and any fees. */
+function invoiceFromBooking(b: Booking, base: Invoice): Invoice {
+  const price = (name: string) => PRICE_LIST.find(p => p.description === name)!;
+  const people = Math.max(1, b.peopleCount || 1);
+  const items: InvoiceItem[] = [];
+
+  if (b.serviceType === "bridal") {
+    items.push(b.trialChoice === "yes" ? { ...price("Bridal preview (trial)") } : { ...price("Bridal makeup") });
+    if (b.trialChoice !== "yes" && people > 1) items.push({ description: "Bridal party makeup", quantity: people - 1, unitPrice: 70 });
+  } else if (b.serviceType === "occasion") {
+    items.push({ ...price("Occasion makeup"), description: b.occasion ? `Occasion makeup · ${b.occasion}` : "Occasion makeup", quantity: people });
+  }
+
+  // Fees from the website's fee table, based on the requested day and time.
+  if (b.date) {
+    const day = new Date(`${b.date}T12:00:00`).getDay();
+    if (day === 0 || day === 6) items.push({ ...price("Weekend fee") });
+  }
+  if (b.time) {
+    if (b.time >= "06:00" && b.time < "08:00") items.push({ ...price("Early morning fee (6am – 8am)") });
+    if (b.time >= "18:00") items.push({ ...price("After 6pm fee") });
+  }
+  if (b.createdAt.slice(0, 10) === b.date) items.push({ ...price("Same day booking fee") });
+  if (b.appointmentType === "mobile") items.push({ ...price("Travel outside Milton Keynes"), description: "Travel" });
+
+  return {
+    ...base,
+    eventDate: b.date || undefined,
+    client: {
+      name: b.fullName,
+      email: b.email,
+      phone: b.phone,
+      address: b.appointmentType === "mobile" ? b.location : "",
+    },
+    items: items.length ? items : base.items,
+    notes: b.couponCode && b.couponApplied ? `Coupon ${b.couponCode} applied.` : base.notes,
+  };
+}
+
 export default function InvoicesPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,9 +95,25 @@ export default function InvoicesPage() {
   const [message, setMessage] = useState<Message>(null);
 
   useEffect(() => {
+    // /admin/invoices?booking=<id> comes from a booking's "Create invoice" button.
+    const bookingId = new URLSearchParams(window.location.search).get("booking");
+
     fetch("/api/admin/invoices")
       .then(r => r.json())
-      .then(json => setInvoices(json.invoices ?? []))
+      .then(async json => {
+        const list: Invoice[] = json.invoices ?? [];
+        setInvoices(list);
+        if (!bookingId) return;
+        const res = await fetch("/api/admin/bookings");
+        const booking = ((await res.json()).bookings as Booking[] | undefined)?.find(b => b.id === bookingId);
+        if (!booking) {
+          setMessage({ kind: "error", text: "Couldn't find that booking." });
+          return;
+        }
+        setDraft(invoiceFromBooking(booking, newInvoice(list)));
+        setMessage({ kind: "ok", text: `Draft created from ${booking.fullName}'s booking. Check the prices, then save.` });
+        window.history.replaceState(null, "", "/admin/invoices");
+      })
       .catch(() => setMessage({ kind: "error", text: "Couldn't load invoices." }))
       .finally(() => setLoading(false));
   }, []);
@@ -407,7 +463,7 @@ export default function InvoicesPage() {
       <Notice message={message} />
 
       {invoices.length > 0 && (
-        <div className="mb-6 grid gap-4 sm:grid-cols-3">
+        <div className="admin-stats mb-6 grid gap-4 sm:grid-cols-3">
           <div className="admin-card">
             <p className="admin-hint">Invoices</p>
             <p className="admin-title mt-1 text-[2rem] leading-none tabular-nums">{invoices.length}</p>

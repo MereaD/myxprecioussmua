@@ -1,19 +1,67 @@
 import { Resend } from "resend";
 import { NextResponse } from "next/server";
-import { getUpcomingAvailability, isValidCoupon } from "@/lib/store";
+import { randomUUID } from "crypto";
+import { getTakenSlots, getUpcomingAvailability, isValidCoupon, saveBooking, todayISO } from "@/lib/store";
+import { formatTime } from "@/lib/time";
+import type { Booking } from "@/lib/booking";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-/** "9", "30", "PM" → "21:30" */
-function to24Hour(hour: string, minute: string, period: string) {
-  let h = Number(hour) % 12;
-  if (period === "PM") h += 12;
-  return `${String(h).padStart(2, "0")}:${minute}`;
-}
+const text = (v: unknown, max: number) => String(v ?? "").trim().slice(0, max);
+
+/** Escapes client-typed text before it goes into the notification email's HTML. */
+const esc = (s: string) =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 export async function POST(req: Request) {
+  let saved = false;
   try {
-    const {
+    const body = await req.json();
+    const fullName = esc(text(body.fullName, 120));
+    const email = text(body.email, 160);
+    const phone = esc(text(body.phone, 40));
+    const serviceType: Booking["serviceType"] = body.serviceType === "bridal" || body.serviceType === "occasion" ? body.serviceType : "";
+    const trialChoice: Booking["trialChoice"] = body.trialChoice === "yes" || body.trialChoice === "no" ? body.trialChoice : null;
+    const occasion = esc(text(body.occasion, 120));
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(body.date) ? body.date : "";
+    const time = /^([01]\d|2[0-3]):[0-5]\d$/.test(body.time) ? body.time : "";
+    const appointmentType: Booking["appointmentType"] = body.appointmentType === "studio" || body.appointmentType === "mobile" ? body.appointmentType : "";
+    const location = esc(text(body.location, 300));
+    const peopleCount = Math.min(20, Math.max(1, Number(body.peopleCount) || 1));
+    const additionalInfo = esc(text(body.additionalInfo, 2000));
+    const couponCode = body.couponCode;
+
+    if (!fullName || !email || !date || !time) {
+      return NextResponse.json({ success: false, error: "Please fill in your name, email, date and time." }, { status: 400 });
+    }
+    if (!/^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]+$/.test(email)) {
+      return NextResponse.json({ success: false, error: "Please enter a valid email address." }, { status: 400 });
+    }
+    if (date < todayISO()) {
+      return NextResponse.json({ success: false, error: "Please choose a date in the future." }, { status: 400 });
+    }
+
+    const normalizedCoupon = couponCode ? esc(String(couponCode).trim().toUpperCase().slice(0, 30)) : "";
+    const couponApplied = normalizedCoupon ? await isValidCoupon(normalizedCoupon) : false;
+
+    // Published availability limits which slots can be requested, and a slot
+    // already held by another request can't be requested twice.
+    const [availability, taken] = await Promise.all([getUpcomingAvailability(), getTakenSlots()]);
+    const day = availability.find(d => d.date === date);
+    const unavailable =
+      taken.has(`${date} ${time}`) || (availability.length > 0 && (!day || !day.times.includes(time)));
+    if (unavailable) {
+      return NextResponse.json(
+        { success: false, error: "That date or time is no longer available. Please choose another." },
+        { status: 400 }
+      );
+    }
+
+    // Save first, so the request reaches the admin Bookings page even if the email fails.
+    await saveBooking({
+      id: randomUUID(),
+      createdAt: new Date().toISOString(),
+      status: "new",
       fullName,
       email,
       phone,
@@ -21,39 +69,21 @@ export async function POST(req: Request) {
       trialChoice,
       occasion,
       date,
-      timeHour,
-      timeMinute,
-      timePeriod,
+      time,
       appointmentType,
       location,
       peopleCount,
       additionalInfo,
-      couponCode,
-    } = await req.json();
+      couponCode: normalizedCoupon,
+      couponApplied,
+      adminNotes: "",
+    });
+    saved = true;
 
-    const normalizedCoupon = couponCode ? String(couponCode).trim().toUpperCase() : "";
-    const couponApplied = normalizedCoupon ? await isValidCoupon(normalizedCoupon) : false;
-
-    // When the admin has published availability, only those slots can be requested.
-    const availability = await getUpcomingAvailability();
-    if (availability.length > 0) {
-      const day = availability.find(d => d.date === date);
-      const time = timeHour && timeMinute && timePeriod ? to24Hour(timeHour, timeMinute, timePeriod) : "";
-      if (!day || !day.times.includes(time)) {
-        return NextResponse.json(
-          { success: false, error: "That date or time is no longer available. Please choose another." },
-          { status: 400 }
-        );
-      }
-    }
-
-    const formattedTime =
-      timeHour && timeMinute && timePeriod
-        ? `${timeHour}:${timeMinute} ${timePeriod}`
-        : "Not specified";
+    const formattedTime = formatTime(time);
 
     const formattedDate = date
-      ? new Date(date).toLocaleDateString("en-GB", {
+      ? new Date(`${date}T12:00:00`).toLocaleDateString("en-GB", {
           weekday: "long",
           day: "numeric",
           month: "long",
@@ -174,13 +204,16 @@ export async function POST(req: Request) {
         </div>
       `,
     });
+    if (data.error) console.error("Booking email failed", data.error);
 
-    return NextResponse.json({ success: true, data });
+    return NextResponse.json({ success: true });
   } catch (error) {
     console.error(error);
+    // The request is already saved to the admin Bookings page, so only report
+    // failure if saving itself didn't happen.
     return NextResponse.json(
-      { success: false, error: "Failed to send email" },
-      { status: 500 }
+      saved ? { success: true } : { success: false, error: "Something went wrong. Please try again." },
+      { status: saved ? 200 : 500 }
     );
   }
 }

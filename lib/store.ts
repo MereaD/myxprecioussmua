@@ -1,5 +1,7 @@
-import { readKey, writeKey } from "./redis";
+import { unstable_rethrow } from "next/navigation";
+import { readKey, redis, writeKey } from "./redis";
 import type { Invoice } from "./invoice";
+import { holdsSlot, type Booking } from "./booking";
 
 // ── Coupons ──────────────────────────────────────────────────────────────────
 
@@ -61,6 +63,51 @@ export async function getUpcomingAvailability() {
     .filter(d => d.date >= today && d.times.length > 0)
     .map(d => ({ ...d, times: [...d.times].sort() }))
     .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/** Upcoming availability minus slots already held by a new or confirmed booking. Shown to clients. */
+export async function getOpenAvailability() {
+  const [days, taken] = await Promise.all([getUpcomingAvailability(), getTakenSlots()]);
+  return days
+    .map(d => ({ ...d, times: d.times.filter(t => !taken.has(`${d.date} ${t}`)) }))
+    .filter(d => d.times.length > 0);
+}
+
+// ── Bookings ─────────────────────────────────────────────────────────────────
+// Stored as a Redis hash (one field per booking), so two requests arriving at
+// once can't overwrite each other.
+
+export async function getBookings(): Promise<Booking[]> {
+  if (!redis) return [];
+  try {
+    const all = await redis.hgetall<Record<string, Booking>>("bookings");
+    return Object.values(all ?? {});
+  } catch (error) {
+    unstable_rethrow(error);
+    console.error("Redis read failed for bookings", error);
+    return [];
+  }
+}
+
+export async function getBooking(id: string): Promise<Booking | null> {
+  if (!redis) return null;
+  return (await redis.hget<Booking>("bookings", id)) ?? null;
+}
+
+export async function saveBooking(booking: Booking) {
+  if (!redis) throw new Error("Redis is not configured. Add the Upstash env vars.");
+  await redis.hset("bookings", { [booking.id]: booking });
+}
+
+export async function deleteBooking(id: string) {
+  if (!redis) throw new Error("Redis is not configured. Add the Upstash env vars.");
+  await redis.hdel("bookings", id);
+}
+
+/** "YYYY-MM-DD HH:MM" keys for every slot held by a new or confirmed booking. */
+export async function getTakenSlots() {
+  const bookings = await getBookings();
+  return new Set(bookings.filter(b => holdsSlot(b) && b.date && b.time).map(b => `${b.date} ${b.time}`));
 }
 
 // ── Portfolio (uploaded through admin) ───────────────────────────────────────

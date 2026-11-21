@@ -269,6 +269,8 @@ export default function PrivacyPolicy() {
           gap: 10px 20px;
         }
         .footer-link {
+          display: inline-block;
+          padding: 8px 0;
           font-family: 'Jost', sans-serif;
           font-weight: 300;
           font-size: 0.75rem;

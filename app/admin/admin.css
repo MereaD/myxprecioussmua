@@ -267,6 +267,36 @@ html[data-admin-theme="dark"] .admin-root {
   background: var(--a-sunken);
   color: var(--a-muted);
 }
+.admin-tag-new {
+  background: rgba(201, 169, 110, 0.18);
+  color: var(--a-gold-deep);
+}
+
+.admin-tabs {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 10px;
+  background: var(--a-sunken);
+  border: 1px solid var(--a-border);
+}
+.admin-tabs button {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 7px;
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--a-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.admin-tabs button[aria-pressed="true"] {
+  background: var(--a-surface);
+  color: var(--a-ink);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
 
 .admin-notice {
   border-radius: 8px;
@@ -356,6 +386,71 @@ html[data-admin-theme="dark"] .admin-root {
   display: none;
 }
 
+/* Left-hand drawer for phones and small tablets */
+.admin-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.admin-drawer-backdrop.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+.admin-drawer {
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 50;
+  width: min(280px, 84vw);
+  display: flex;
+  flex-direction: column;
+  padding: 18px 14px 20px;
+  background: var(--a-sidebar);
+  border-right: 1px solid var(--a-border);
+  box-shadow: 8px 0 30px rgba(0, 0, 0, 0.18);
+  transform: translateX(-100%);
+  visibility: hidden;
+  transition: transform 0.25s ease, visibility 0s linear 0.25s;
+}
+.admin-drawer.is-open {
+  transform: translateX(0);
+  visibility: visible;
+  transition: transform 0.25s ease, visibility 0s;
+}
+@media (prefers-reduced-motion: reduce) {
+  .admin-drawer,
+  .admin-drawer-backdrop {
+    transition: none;
+  }
+}
+@media (min-width: 861px) {
+  .admin-drawer,
+  .admin-drawer-backdrop {
+    display: none;
+  }
+}
+
+/* Summary figures sit three across on phones instead of stacking */
+@media (max-width: 640px) {
+  .admin-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+  .admin-stats > * {
+    padding: 12px !important;
+  }
+  .admin-stats .admin-title {
+    font-size: 1.6rem !important;
+  }
+  .admin-stats .admin-hint {
+    font-size: 0.75rem !important;
+    line-height: 1.3;
+  }
+}
+
 @media (max-width: 860px) {
   .admin-shell {
     display: block;
@@ -416,5 +511,9 @@ html[data-admin-theme="dark"] .admin-root {
   }
   .admin-auth-visual {
     display: none;
+  }
+  .admin-auth-panel {
+    padding: 64px 16px 32px;
+    justify-content: flex-start;
   }
 }

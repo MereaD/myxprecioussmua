@@ -111,6 +111,8 @@ export default function GetInTouch() {
         }
 
         .footer-link {
+          display: inline-block;
+          padding: 8px 0;
           transition: color 0.2s ease;
           color: #7a5c46;
           font-family: 'Jost', sans-serif;

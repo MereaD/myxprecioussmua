@@ -259,7 +259,7 @@ export default function Portfolio({ uploaded = [] }: { uploaded?: PortfolioImage
           .pf-feed-caption-category {
             font-family: 'Jost', sans-serif;
             font-weight: 300;
-            font-size: 0.62rem;
+            font-size: 0.72rem;
             letter-spacing: 0.2em;
             text-transform: uppercase;
             color: #c9a96e;
@@ -272,8 +272,8 @@ export default function Portfolio({ uploaded = [] }: { uploaded?: PortfolioImage
             line-height: 1.6;
             color: #7a5c46;
           }
-          .pf-filters { padding: 24px 16px 0; gap: 8px; }
-          .pf-pill { font-size: 0.65rem; padding: 7px 16px; }
+          .pf-filters { padding: 24px 16px 0; gap: 8px; flex-wrap: wrap; justify-content: center; }
+          .pf-pill { font-size: 0.72rem; padding: 9px 16px; }
           .pf-banner-title { font-size: 1.6rem; }
         }
 

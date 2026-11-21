@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { formatDate, formatTime } from '@/lib/time'
+import DateTimePicker from './date-time-picker'
 
 type ServiceType = 'bridal' | 'occasion' | ''
 type TrialChoice = 'yes' | 'no' | null
@@ -26,9 +26,7 @@ export default function BookingPage() {
     phone: '',
     occasion: '',
     date: '',
-    timeHour: '',
-    timeMinute: '',
-    timePeriod: '',
+    time: '', // HH:MM, 24-hour
     location: '',
     additionalInfo: '',
   })
@@ -50,42 +48,6 @@ export default function BookingPage() {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
-  }
-
-  const handleTimeChange = (
-    field: 'timeHour' | 'timeMinute' | 'timePeriod',
-    value: string
-  ) => {
-    setForm(prev => ({ ...prev, [field]: value }))
-  }
-
-  // Dates and times set in /admin/availability. Empty means any date/time can be requested.
-  const [availableDays, setAvailableDays] = useState<{ date: string; times: string[] }[]>([])
-
-  useEffect(() => {
-    fetch('/api/availability')
-      .then(res => res.json())
-      .then(json => setAvailableDays(json.days ?? []))
-      .catch(() => setAvailableDays([]))
-  }, [])
-
-  const selectedDay = availableDays.find(d => d.date === form.date)
-  const selectedSlot = form.timeHour && form.timeMinute && form.timePeriod
-    ? `${String((Number(form.timeHour) % 12) + (form.timePeriod === 'PM' ? 12 : 0)).padStart(2, '0')}:${form.timeMinute}`
-    : ''
-
-  const handleDayChange = (date: string) => {
-    setForm(prev => ({ ...prev, date, timeHour: '', timeMinute: '', timePeriod: '' }))
-  }
-
-  const handleSlotChange = (slot: string) => {
-    const [h, m] = slot.split(':').map(Number)
-    setForm(prev => ({
-      ...prev,
-      timeHour: String(h % 12 || 12),
-      timeMinute: String(m).padStart(2, '0'),
-      timePeriod: h < 12 ? 'AM' : 'PM',
-    }))
   }
 
   // Debounced server-side coupon check
@@ -117,6 +79,10 @@ export default function BookingPage() {
   }, [couponCode])
 
   const handleSubmit = async () => {
+    if (!form.date || !form.time) {
+      setError('Please choose a date and time for your appointment.')
+      return
+    }
     setLoading(true)
     setError(null)
     try {
@@ -527,88 +493,14 @@ export default function BookingPage() {
                     <div className="slide-in">
                       <SectionDivider label="Date & Location" />
 
-                      {availableDays.length > 0 ? (
-                        <>
-                          <div className="mb-6">
-                            <FieldLabel>Date <Req /></FieldLabel>
-                            <select
-                              value={form.date}
-                              onChange={e => handleDayChange(e.target.value)}
-                              className="booking-input"
-                            >
-                              <option value="" disabled>Choose an available date</option>
-                              {availableDays.map(d => (
-                                <option key={d.date} value={d.date}>{formatDate(d.date)}</option>
-                              ))}
-                            </select>
-                          </div>
-
-                          <div className="mb-6">
-                            <FieldLabel>Time <Req /></FieldLabel>
-                            <select
-                              value={selectedDay?.times.includes(selectedSlot) ? selectedSlot : ''}
-                              onChange={e => handleSlotChange(e.target.value)}
-                              className="booking-input"
-                              disabled={!selectedDay}
-                            >
-                              <option value="" disabled>
-                                {selectedDay ? 'Choose a time' : 'Choose a date first'}
-                              </option>
-                              {selectedDay?.times.map(t => (
-                                <option key={t} value={t}>{formatTime(t)}</option>
-                              ))}
-                            </select>
-                          </div>
-                        </>
-                      ) : (
-                      <>
                       <div className="mb-6">
-                        <FieldLabel>Date <Req /></FieldLabel>
-                        <input
-                          name="date"
-                          type="date"
-                          value={form.date}
-                          onChange={handleChange}
-                          className="booking-input"
+                        <FieldLabel>Date & Time <Req /></FieldLabel>
+                        <DateTimePicker
+                          date={form.date}
+                          time={form.time}
+                          onChange={({ date, time }) => setForm(prev => ({ ...prev, date, time }))}
                         />
                       </div>
-
-                      <div className="mb-6">
-                        <FieldLabel>Time <Req /></FieldLabel>
-                        <div className="time-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 0.9fr', gap: '12px' }}>
-                          <select
-                            value={form.timeHour}
-                            onChange={e => handleTimeChange('timeHour', e.target.value)}
-                            className="booking-input time-select"
-                          >
-                            <option value="" disabled>Hour</option>
-                            {Array.from({ length: 12 }, (_, i) => i + 1).map(h => (
-                              <option key={h} value={h}>{h}</option>
-                            ))}
-                          </select>
-                          <select
-                            value={form.timeMinute}
-                            onChange={e => handleTimeChange('timeMinute', e.target.value)}
-                            className="booking-input time-select"
-                          >
-                            <option value="" disabled>Min</option>
-                            {['00', '15', '30', '45'].map(m => (
-                              <option key={m} value={m}>{m}</option>
-                            ))}
-                          </select>
-                          <select
-                            value={form.timePeriod}
-                            onChange={e => handleTimeChange('timePeriod', e.target.value)}
-                            className="booking-input time-select"
-                          >
-                            <option value="" disabled>—</option>
-                            <option value="AM">AM</option>
-                            <option value="PM">PM</option>
-                          </select>
-                        </div>
-                      </div>
-                      </>
-                      )}
 
                       <div className="mb-6">
                         <FieldLabel>Appointment Type <Req /></FieldLabel>

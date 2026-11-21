@@ -14,11 +14,11 @@ export default function Footer() {
           >
             Myxprecioussmua
           </p>
-          <nav className="flex flex-wrap items-center justify-center gap-x-5 gap-y-3 md:gap-6">
-            <Link href="/Spotlight" className="text-xs tracking-[0.15em] uppercase text-[#a3836c] hover:text-[#d3cac2] transition-colors duration-200" style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300 }}>Spotlight</Link>
-            <Link href="/Bridal" className="text-xs tracking-[0.15em] uppercase text-[#a3836c] hover:text-[#d3cac2] transition-colors duration-200" style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300 }}>Bridal</Link>
-            <Link href="/Collab" className="text-xs tracking-[0.15em] uppercase text-[#a3836c] hover:text-[#d3cac2] transition-colors duration-200" style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300 }}>Collab</Link>
-            <Link href="/Contact" className="text-xs tracking-[0.15em] uppercase text-[#a3836c] hover:text-[#d3cac2] transition-colors duration-200" style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300 }}>Contact</Link>
+          <nav className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1 md:gap-6">
+            <Link href="/Spotlight" className="py-2 text-xs tracking-[0.15em] uppercase text-[#a3836c] hover:text-[#d3cac2] transition-colors duration-200" style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300 }}>Spotlight</Link>
+            <Link href="/Bridal" className="py-2 text-xs tracking-[0.15em] uppercase text-[#a3836c] hover:text-[#d3cac2] transition-colors duration-200" style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300 }}>Bridal</Link>
+            <Link href="/Collab" className="py-2 text-xs tracking-[0.15em] uppercase text-[#a3836c] hover:text-[#d3cac2] transition-colors duration-200" style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300 }}>Collab</Link>
+            <Link href="/Contact" className="py-2 text-xs tracking-[0.15em] uppercase text-[#a3836c] hover:text-[#d3cac2] transition-colors duration-200" style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300 }}>Contact</Link>
           </nav>
         </div>
 
@@ -96,7 +96,7 @@ export default function Footer() {
         <div className="flex items-center justify-center gap-4 mb-5">
           <Link
             href="/Privacy-policy"
-            className="text-xs tracking-[0.12em] uppercase transition-colors duration-200"
+            className="py-2 text-xs tracking-[0.12em] uppercase transition-colors duration-200"
             style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, color: "#a3836c" }}
             onMouseOver={e => (e.currentTarget.style.color = "#c9a96e")}
             onMouseOut={e => (e.currentTarget.style.color = "#a3836c")}
@@ -106,7 +106,7 @@ export default function Footer() {
           <span style={{ color: "rgba(201,169,110,0.35)", fontSize: "0.6rem" }}>✦</span>
           <Link
             href="/Terms&Conditions"
-            className="text-xs tracking-[0.12em] uppercase transition-colors duration-200"
+            className="py-2 text-xs tracking-[0.12em] uppercase transition-colors duration-200"
             style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, color: "#a3836c" }}
             onMouseOver={e => (e.currentTarget.style.color = "#c9a96e")}
             onMouseOut={e => (e.currentTarget.style.color = "#a3836c")}

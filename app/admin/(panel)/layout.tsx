@@ -5,6 +5,7 @@ import { checkAdmin } from "@/lib/admin";
 import { redis } from "@/lib/redis";
 import { cloudinaryConfigured } from "@/lib/cloudinary";
 import { AdminNav } from "./nav";
+import { MobileNav } from "./mobile-nav";
 import { ThemeToggle } from "../theme-toggle";
 
 function Brand() {
@@ -65,16 +66,26 @@ export default async function AdminPanelLayout({ children }: { children: React.R
         </div>
       </aside>
 
-      <div className="admin-mobile-bar">
-        <div className="flex items-center justify-between px-4 py-3">
-          <Brand />
-          <div className="flex items-center gap-3">
+      <MobileNav
+        brand={<Brand />}
+        actions={
+          <>
             <ThemeToggle />
             <UserButton />
-          </div>
-        </div>
-        <AdminNav direction="row" />
-      </div>
+          </>
+        }
+        drawerFooter={
+          <>
+            <a href="/" target="_blank" rel="noreferrer" className="admin-nav-link">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />
+              </svg>
+              View website
+            </a>
+            <p className="mt-2 truncate px-2.5 text-sm text-[var(--a-muted)]">{admin.email}</p>
+          </>
+        }
+      />
 
       <main className="admin-main">
         <div className="admin-content">

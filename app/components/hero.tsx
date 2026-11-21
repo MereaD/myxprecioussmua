@@ -7,268 +7,269 @@ export default function Hero() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Lora:ital,wght@0,400;0,500;1,400&family=Jost:wght@300;400&display=swap');
 
-        * { box-sizing: border-box; }
-
-        .hero-section {
+        .hero {
           position: relative;
           width: 100%;
-          height: calc(100vh - 72px);
-          min-height: 580px;
+          /* Full screen: the nav floats over the top of the photo */
+          height: 100vh;
+          height: 100svh;
+          min-height: 620px;
           overflow: hidden;
+          background: #1c140e;
+          color: #faf6f1;
         }
 
-        /* Subtle gradient — bottom only, light, so image stays the star */
-        .hero-gradient-bottom {
+        /* Slow push-in on the photo */
+        .hero-media {
           position: absolute;
           inset: 0;
-          background: linear-gradient(
-            to top,
-            rgba(20, 10, 5, 0.72) 0%,
-            rgba(20, 10, 5, 0.18) 38%,
-            transparent 60%
-          );
-          z-index: 1;
+          animation: heroZoom 18s ease-out both;
+        }
+        @keyframes heroZoom {
+          from { transform: scale(1.08); }
+          to   { transform: scale(1); }
         }
 
-        /* Very faint left vignette to ground the text */
-        .hero-gradient-left {
+        /* Shading: darker on the left and bottom where the text sits, so the face stays bright */
+        .hero-shade {
           position: absolute;
           inset: 0;
-          background: linear-gradient(
-            to right,
-            rgba(20, 10, 5, 0.28) 0%,
-            transparent 55%
-          );
           z-index: 1;
+          background:
+            linear-gradient(to top, rgba(20, 12, 6, 0.85) 0%, rgba(20, 12, 6, 0.25) 42%, transparent 65%),
+            linear-gradient(to right, rgba(20, 12, 6, 0.55) 0%, rgba(20, 12, 6, 0.15) 45%, transparent 70%);
         }
 
-        /* Content sits at the bottom-left */
         .hero-content {
           position: absolute;
           inset: 0;
           z-index: 2;
           display: flex;
-          align-items: flex-end;
+          flex-direction: column;
+          justify-content: flex-end;
           padding: 0 56px 56px;
         }
+        .hero-inner { max-width: 560px; }
 
-        .hero-inner {
-          display: flex;
-          flex-direction: column;
-          max-width: 520px;
-        }
-
-        /* Eyebrow */
         .hero-eyebrow {
-          font-family: 'Jost', sans-serif;
-          font-weight: 300;
-          font-size: 0.68rem;
-          letter-spacing: 0.3em;
-          text-transform: uppercase;
-          color: #e8c99a;
-          margin-bottom: 14px;
-        }
-
-        /* Gold divider before headline */
-        .hero-rule {
           display: flex;
           align-items: center;
-          gap: 10px;
-          margin-bottom: 18px;
+          gap: 14px;
+          margin-bottom: 22px;
+          font-family: 'Jost', sans-serif;
+          font-weight: 400;
+          font-size: 0.7rem;
+          letter-spacing: 0.28em;
+          text-transform: uppercase;
+          color: #e8c99a;
         }
-        .hero-rule-line {
-          height: 1px;
+        .hero-eyebrow::before {
+          content: '';
           width: 36px;
-          background: rgba(201,169,110,0.6);
-        }
-        .hero-rule-star {
-          color: #c9a96e;
-          font-size: 0.6rem;
+          height: 1px;
+          background: rgba(232, 201, 154, 0.7);
         }
 
-        /* Headline */
         .hero-headline {
           font-family: 'Cormorant Garamond', Georgia, serif;
           font-weight: 500;
-          font-size: clamp(2.4rem, 5vw, 3.8rem);
-          line-height: 1.08;
-          color: #fff;
-          margin-bottom: 16px;
-          letter-spacing: 0.01em;
+          font-size: clamp(2.7rem, 6vw, 4.6rem);
+          line-height: 1.02;
+          letter-spacing: -0.01em;
+          margin-bottom: 22px;
         }
         .hero-headline em {
           font-weight: 400;
           color: #e8c99a;
         }
 
-        /* Sub */
         .hero-sub {
           font-family: 'Lora', Georgia, serif;
-          font-style: italic;
-          font-size: 0.88rem;
-          line-height: 1.75;
-          color: rgba(255,255,255,0.8);
-          max-width: 320px;
-          margin-bottom: 8px;
+          font-size: 1rem;
+          line-height: 1.7;
+          color: rgba(250, 246, 241, 0.82);
+          max-width: 420px;
+          margin-bottom: 34px;
         }
 
-        /* Location */
-        .hero-location {
-          font-family: 'Jost', sans-serif;
-          font-weight: 300;
-          font-size: 0.68rem;
-          letter-spacing: 0.22em;
-          text-transform: uppercase;
-          color: rgba(232,201,154,0.75);
-          margin-bottom: 28px;
+        .hero-actions {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 12px 24px;
         }
-
-        /* CTA */
         .hero-cta {
           display: inline-flex;
           align-items: center;
-          gap: 10px;
+          gap: 12px;
+          height: 52px;
+          padding: 0 30px;
+          border-radius: 999px;
           background: linear-gradient(135deg, #c9a96e, #a07840);
           color: #faf6f1;
           font-family: 'Jost', sans-serif;
-          font-weight: 300;
-          font-size: 0.72rem;
-          letter-spacing: 0.22em;
+          font-weight: 400;
+          font-size: 0.74rem;
+          letter-spacing: 0.2em;
           text-transform: uppercase;
           text-decoration: none;
-          padding: 14px 36px;
-          border-radius: 999px;
-          box-shadow: 0 4px 24px rgba(201,169,110,0.35);
-          transition: box-shadow 0.25s ease, transform 0.25s ease;
-          width: fit-content;
+          box-shadow: 0 10px 30px rgba(160, 120, 64, 0.35);
+          transition: transform 0.25s ease, box-shadow 0.25s ease;
         }
         .hero-cta:hover {
-          box-shadow: 0 8px 36px rgba(201,169,110,0.55);
           transform: translateY(-1px);
+          box-shadow: 0 14px 36px rgba(160, 120, 64, 0.5);
         }
-        .hero-cta:active { transform: translateY(0); }
+        .hero-cta svg { transition: transform 0.25s ease; }
+        .hero-cta:hover svg { transform: translateX(3px); }
 
-        /* Scroll hint */
+        .hero-link {
+          position: relative;
+          padding: 6px 0;
+          font-family: 'Jost', sans-serif;
+          font-weight: 400;
+          font-size: 0.74rem;
+          letter-spacing: 0.2em;
+          text-transform: uppercase;
+          color: #faf6f1;
+          text-decoration: none;
+        }
+        .hero-link::after {
+          content: '';
+          position: absolute;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          height: 1px;
+          background: rgba(250, 246, 241, 0.5);
+          transform-origin: left;
+          transition: background 0.25s ease;
+        }
+        .hero-link:hover::after { background: #e8c99a; }
+
+        .hero-cta:focus-visible,
+        .hero-link:focus-visible,
+        .hero-scroll:focus-visible {
+          outline: 1px solid #e8c99a;
+          outline-offset: 4px;
+        }
+
+        /* Scroll cue, bottom right */
         .hero-scroll {
           position: absolute;
-          bottom: 32px;
           right: 40px;
+          bottom: 40px;
           z-index: 2;
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 8px;
-        }
-        .hero-scroll-text {
+          gap: 10px;
+          color: rgba(250, 246, 241, 0.6);
           font-family: 'Jost', sans-serif;
-          font-weight: 300;
-          font-size: 0.6rem;
+          font-size: 0.62rem;
           letter-spacing: 0.25em;
           text-transform: uppercase;
-          color: rgba(232,201,154,0.55);
+          text-decoration: none;
           writing-mode: vertical-rl;
         }
         .hero-scroll-line {
+          position: relative;
           width: 1px;
           height: 48px;
-          background: linear-gradient(to bottom, rgba(201,169,110,0.5), transparent);
+          overflow: hidden;
+          background: rgba(250, 246, 241, 0.2);
+        }
+        .hero-scroll-line::after {
+          content: '';
+          position: absolute;
+          left: 0;
+          top: -50%;
+          width: 1px;
+          height: 50%;
+          background: #e8c99a;
+          animation: heroScroll 2.2s ease-in-out infinite;
+        }
+        @keyframes heroScroll {
+          to { top: 100%; }
         }
 
-        @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(16px); }
+        @keyframes heroFadeUp {
+          from { opacity: 0; transform: translateY(18px); }
           to   { opacity: 1; transform: translateY(0); }
         }
-        .fade-up  { animation: fadeUp 0.8s ease both; }
-        .delay-1  { animation-delay: 0.1s; }
-        .delay-2  { animation-delay: 0.25s; }
-        .delay-3  { animation-delay: 0.4s; }
-        .delay-4  { animation-delay: 0.55s; }
+        .hero-in { animation: heroFadeUp 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+        .hero-d1 { animation-delay: 0.15s; }
+        .hero-d2 { animation-delay: 0.3s; }
+        .hero-d3 { animation-delay: 0.45s; }
+        .hero-d4 { animation-delay: 0.6s; }
 
-        /* ── MOBILE ── */
+        @media (prefers-reduced-motion: reduce) {
+          .hero-media, .hero-in, .hero-scroll-line::after { animation: none; }
+        }
+
+        /* ── Phones ── */
         @media (max-width: 640px) {
-          .hero-section {
-            min-height: 100svh;
-            height: 100svh;
+          .hero { min-height: 560px; }
+          .hero-shade {
+            background:
+              linear-gradient(to top, rgba(20, 12, 6, 0.92) 0%, rgba(20, 12, 6, 0.45) 45%, transparent 70%);
           }
-
-          .hero-content {
-            padding: 0 24px 44px;
-            align-items: flex-end;
-          }
-
-          .hero-headline {
-            font-size: clamp(2rem, 8vw, 2.6rem);
-          }
-
-          .hero-sub {
-            font-size: 0.84rem;
-            max-width: 100%;
-          }
-
-          .hero-scroll {
-            display: none;
-          }
-
-          .hero-cta {
-            padding: 13px 28px;
-            font-size: 0.7rem;
-          }
+          .hero-content { padding: 0 20px 44px; }
+          .hero-eyebrow { font-size: 0.62rem; gap: 10px; margin-bottom: 16px; }
+          .hero-eyebrow::before { width: 24px; }
+          .hero-headline { font-size: clamp(2.3rem, 10.5vw, 2.9rem); margin-bottom: 16px; }
+          .hero-sub { font-size: 0.92rem; margin-bottom: 26px; }
+          .hero-actions { gap: 14px 20px; }
+          .hero-cta { height: 48px; padding: 0 24px; }
+          .hero-scroll { display: none; }
         }
       `}</style>
 
-      <section className="hero-section">
+      <section className="hero" aria-label="Introduction">
+        <div className="hero-media">
+          <Image
+            src="/ojono.png"
+            alt="Bride in soft glam makeup by Myxprecioussmua"
+            fill
+            sizes="100vw"
+            className="object-cover object-[40%_center] md:object-center"
+            priority
+          />
+        </div>
+        <div className="hero-shade" />
 
-        {/* Full-bleed background image — the focus */}
-        <Image
-          src="/ojono.png"
-          alt="Soft glam makeup look"
-          fill
-          className="object-cover object-center"
-          priority
-        />
-
-        {/* Gradient overlays — minimal, preserve image */}
-        <div className="hero-gradient-bottom" />
-        <div className="hero-gradient-left" />
-
-        {/* Content — anchored bottom-left */}
         <div className="hero-content">
           <div className="hero-inner">
+            <p className="hero-eyebrow hero-in hero-d1">Makeup artist · Milton Keynes</p>
 
-            <p className="hero-eyebrow fade-up delay-1">Myxprecioussmua</p>
-
-            <div className="hero-rule fade-up delay-1">
-              <div className="hero-rule-line" />
-              <span className="hero-rule-star">✦</span>
-            </div>
-
-            <h1 className="hero-headline fade-up delay-2">
+            <h1 className="hero-headline hero-in hero-d2">
               Creating stunning
               <br />
               <em>soft glam</em> looks
             </h1>
 
-            <p className="hero-sub fade-up delay-3">
+            <p className="hero-sub hero-in hero-d3">
               Enhancing natural beauty and helping you feel confident for every occasion.
             </p>
 
-            <p className="hero-location fade-up delay-3">
-              Based in Milton Keynes · Available to travel
-            </p>
-
-            <Link href="/Request-Appointment" className="hero-cta fade-up delay-4">
-              Request Appointment ✦
-            </Link>
-
+            <div className="hero-actions hero-in hero-d4">
+              <Link href="/Request-Appointment" className="hero-cta">
+                Request appointment
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M5 12h14M13 6l6 6-6 6" />
+                </svg>
+              </Link>
+              <Link href="/Portfolio" className="hero-link">
+                View portfolio
+              </Link>
+            </div>
           </div>
         </div>
 
-        {/* Scroll hint — desktop only */}
-        <div className="hero-scroll">
-          <span className="hero-scroll-text">Scroll</span>
-          <div className="hero-scroll-line" />
-        </div>
-
+        <a href="#services" className="hero-scroll hero-in hero-d4" aria-label="Scroll to services">
+          Scroll
+          <span className="hero-scroll-line" />
+        </a>
       </section>
     </>
   );

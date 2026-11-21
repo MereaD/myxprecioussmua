@@ -10,6 +10,7 @@ const icon = (d: string) => (
 
 const LINKS = [
   { href: "/admin", label: "Overview", icon: icon("M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z") },
+  { href: "/admin/bookings", label: "Bookings", icon: icon("M8 3v3m8-3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm4 9 2 2 4-4") },
   { href: "/admin/availability", label: "Availability", icon: icon("M7 3v3m10-3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z") },
   { href: "/admin/coupons", label: "Coupons", icon: icon("M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4Zm10-2v12") },
   { href: "/admin/invoices", label: "Invoices", icon: icon("M7 3h8l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Zm8 0v4h4M9.5 12h5M9.5 16h5") },

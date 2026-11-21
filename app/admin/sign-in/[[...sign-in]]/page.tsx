@@ -54,8 +54,8 @@ export default function AdminSignInPage() {
             appearance={{
               elements: {
                 rootBox: "w-full",
-                cardBox: "w-full !shadow-none !rounded-xl border border-[var(--a-border)]",
-                card: "!shadow-none",
+                cardBox: "!w-full !min-w-0 !max-w-full !shadow-none !rounded-xl border border-[var(--a-border)]",
+                card: "!shadow-none !w-full !min-w-0 !px-5",
                 header: "!hidden",
                 formFieldInput: "!border !border-[var(--a-border-strong)] !shadow-none",
                 socialButtonsBlockButton: "!border !border-[var(--a-border-strong)] !shadow-none",

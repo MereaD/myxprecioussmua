@@ -297,18 +297,18 @@ export default function BridalPage() {
               {fees.map((fee, i) => (
                 <div
                   key={i}
-                  className="fee-row flex items-center justify-between px-6 py-4"
+                  className="fee-row flex items-center justify-between gap-4 px-4 sm:px-6 py-4"
                   style={{ borderBottom: i < fees.length - 1 ? "1px solid #e8ddd4" : "none" }}
                 >
                   <span
-                    className="text-sm text-[#5a4435] flex items-center gap-3"
+                    className="text-sm text-[#5a4435] flex items-center gap-3 min-w-0"
                     style={{ fontFamily: "'Lora', Georgia, serif" }}
                   >
                     <span className="w-1 h-1 rounded-full bg-[#c9a96e]/50 flex-shrink-0 inline-block" />
                     {fee.label}
                   </span>
                   <span
-                    className="text-sm font-medium"
+                    className="text-sm font-medium shrink-0 text-right whitespace-nowrap"
                     style={{ color: "#c9a96e", fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "1rem" }}
                   >
                     {fee.amount}

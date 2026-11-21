@@ -306,8 +306,12 @@ export default function Gallery() {
           display: flex;
           align-items: center;
           justify-content: space-between;
+          gap: 16px;
           padding: 16px 24px;
           transition: background 0.2s ease;
+        }
+        @media (max-width: 480px) {
+          .gallery-fee-row { padding: 14px 16px; }
         }
         .gallery-fee-row:hover {
           background: rgba(201,169,110,0.05);
@@ -333,6 +337,9 @@ export default function Gallery() {
           font-weight: 500;
           font-size: 1rem;
           color: #c9a96e;
+          flex-shrink: 0;
+          text-align: right;
+          white-space: nowrap;
         }
         .gallery-fee-note {
           padding: 12px 24px;

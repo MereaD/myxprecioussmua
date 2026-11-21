@@ -286,7 +286,7 @@ export default function ServicesCards() {
         }
       `}</style>
 
-      <section className="sv-section">
+      <section id="services" className="sv-section">
 
         {/* ── Header ── */}
         <div className="sv-header sv-fade-up">

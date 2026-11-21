@@ -160,6 +160,8 @@ export default function CollabPage() {
         }
 
         .footer-link {
+          display: inline-block;
+          padding: 8px 0;
           transition: color 0.2s ease;
           color: #7a5c46;
           font-family: 'Jost', sans-serif;
@@ -242,8 +244,9 @@ export default function CollabPage() {
 
         /* Very small screens */
         @media (max-width: 360px) {
-          .collab-type-grid {
-            grid-template-columns: 1fr !important;
+          /* Stay two across so the six tiles don't become a long scroll */
+          .collab-card {
+            padding: 12px 10px !important;
           }
           .page-title {
             font-size: 1.8rem !important;

@@ -116,6 +116,9 @@ export const edCss = `
         .ed-svc-body p { font-family: 'Lora', Georgia, serif; color: #7a5c46; line-height: 1.75; max-width: 440px; padding-top: 14px; }
         .ed-svc-body small { display: block; margin-top: 10px; font-family: 'Jost', sans-serif; font-size: 0.72rem; letter-spacing: 0.16em; text-transform: uppercase; color: #2c1f14; }
         .ed-svc-thumb { display: none; }
+        .ed-svc-more { display: none; align-items: center; gap: 10px; margin-top: 16px; padding-bottom: 4px; border-bottom: 1px solid currentColor; font-family: 'Jost', sans-serif; font-size: 0.72rem; letter-spacing: 0.18em; text-transform: uppercase; color: #2c1f14; }
+        .ed-svc-title, .ed-svc-arrow { -webkit-tap-highlight-color: transparent; }
+        .ed-svc { -webkit-tap-highlight-color: transparent; }
         .ed-svc-media { position: sticky; top: 104px; aspect-ratio: 4 / 5; overflow: hidden; border-radius: 4px; background: #e8ddd4; }
         .ed-svc-media figure { position: absolute; inset: 0; margin: 0; opacity: 0; transform: scale(1.06); transition: opacity 0.8s var(--ease), transform 1.4s var(--ease); }
         .ed-svc-media figure[data-active="true"] { opacity: 1; transform: scale(1); }
@@ -168,6 +171,7 @@ export const edCss = `
           .ed-badge { left: auto; right: -12px; bottom: -32px; }
           .ed-svc-media { display: none; }
           .ed-svc-thumb { display: block; position: relative; aspect-ratio: 16 / 10; overflow: hidden; border-radius: 4px; margin-top: 18px; }
+          .ed-svc-more { display: inline-flex; }
           .ed-review { gap: 56px; }
           .ed-review-img { max-width: 420px; }
         }

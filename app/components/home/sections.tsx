@@ -84,6 +84,18 @@ export function EdMarquee() {
 
 export function EdServices() {
   const [service, setService] = useState(0);
+
+  // Desktop: hovering a service opens it and a click goes to its page.
+  // Phones and tablets have no hover (and no photo panel), so the first tap opens
+  // the service and the next tap goes to its page.
+  const onTap = (e: React.MouseEvent, i: number) => {
+    const tapToOpen = !matchMedia("(hover: hover)").matches || matchMedia("(max-width: 980px)").matches;
+    if (tapToOpen && service !== i) {
+      e.preventDefault();
+      setService(i);
+    }
+  };
+
   return (
     <section className="ed-section">
       <div className="ed-wrap">
@@ -103,8 +115,12 @@ export function EdServices() {
                 href={s.href}
                 className="ed-svc"
                 data-active={service === i}
-                onMouseEnter={() => setService(i)}
-                onFocus={() => setService(i)}
+                aria-expanded={service === i}
+                // Mouse and keyboard only: a tap also fires enter/focus first, which
+                // would open the row and let the same tap navigate away.
+                onPointerEnter={e => e.pointerType === "mouse" && setService(i)}
+                onFocus={e => e.currentTarget.matches(":focus-visible") && setService(i)}
+                onClick={e => onTap(e, i)}
                 data-reveal
                 style={d(`${i * 0.12}s`)}
               >
@@ -120,6 +136,7 @@ export function EdServices() {
                     <div className="ed-svc-thumb">
                       <Image src={s.image} alt="" fill sizes="90vw" className="object-cover object-top" />
                     </div>
+                    <span className="ed-svc-more">Explore {s.title.toLowerCase()} <Arrow /></span>
                   </div>
                 </div>
               </Link>
